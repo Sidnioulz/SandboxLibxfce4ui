@@ -49,6 +49,7 @@
 #include <glib/gstdio.h>
 #include <libxfce4util/libxfce4util.h>
 #include <libxfce4ui/xfce-spawn.h>
+#include <libxfce4ui/xfce-workspace.h>
 #include <libxfce4ui/xfce-gdk-extensions.h>
 #include <libxfce4ui/libxfce4ui-private.h>
 #include <libxfce4ui/libxfce4ui-alias.h>
@@ -188,68 +189,6 @@ xfce_spawn_startup_watch_destroy (gpointer user_data)
 
 
 
-#ifdef HAVE_LIBSTARTUP_NOTIFICATION
-static gint
-xfce_spawn_get_active_workspace_number (GdkScreen *screen)
-{
-  GdkWindow *root;
-  gulong     bytes_after_ret = 0;
-  gulong     nitems_ret = 0;
-  guint     *prop_ret = NULL;
-  Atom       _NET_CURRENT_DESKTOP;
-  Atom       _WIN_WORKSPACE;
-  Atom       type_ret = None;
-  gint       format_ret;
-  gint       ws_num = 0;
-
-  gdk_error_trap_push ();
-
-  root = gdk_screen_get_root_window (screen);
-
-  /* determine the X atom values */
-  _NET_CURRENT_DESKTOP = XInternAtom (GDK_WINDOW_XDISPLAY (root), "_NET_CURRENT_DESKTOP", False);
-  _WIN_WORKSPACE = XInternAtom (GDK_WINDOW_XDISPLAY (root), "_WIN_WORKSPACE", False);
-
-  if (XGetWindowProperty (GDK_WINDOW_XDISPLAY (root),
-                          gdk_x11_get_default_root_xwindow(),
-                          _NET_CURRENT_DESKTOP, 0, 32, False, XA_CARDINAL,
-                          &type_ret, &format_ret, &nitems_ret, &bytes_after_ret,
-                          (gpointer) &prop_ret) != Success)
-    {
-      if (XGetWindowProperty (GDK_WINDOW_XDISPLAY (root),
-                              gdk_x11_get_default_root_xwindow(),
-                              _WIN_WORKSPACE, 0, 32, False, XA_CARDINAL,
-                              &type_ret, &format_ret, &nitems_ret, &bytes_after_ret,
-                              (gpointer) &prop_ret) != Success)
-        {
-          if (G_UNLIKELY (prop_ret != NULL))
-            {
-              XFree (prop_ret);
-              prop_ret = NULL;
-            }
-        }
-    }
-
-  if (G_LIKELY (prop_ret != NULL))
-    {
-      if (G_LIKELY (type_ret != None && format_ret != 0))
-        ws_num = *prop_ret;
-      XFree (prop_ret);
-    }
-
-#if GTK_CHECK_VERSION (3, 0, 0)
-  gdk_error_trap_pop_ignored ();
-#else
-  if (gdk_error_trap_pop () != 0)
-    return 0;
-#endif
-
-  return ws_num;
-}
-#endif
-
-
-
 /**
  * xfce_spawn_on_screen_with_closure:
  * @screen              : a #GdkScreen or %NULL to use the active screen,
@@ -371,7 +310,7 @@ xfce_spawn_on_screen_with_child_watch (GdkScreen    *screen,
           if (G_LIKELY (sn_launcher != NULL))
             {
               /* initiate the sn launcher context */
-              sn_workspace = xfce_spawn_get_active_workspace_number (screen);
+              sn_workspace = xfce_workspace_get_active_workspace_number (screen);
               sn_launcher_context_set_workspace (sn_launcher, sn_workspace);
               sn_launcher_context_set_binary_name (sn_launcher, argv[0]);
               sn_launcher_context_set_icon_name (sn_launcher, startup_icon_name != NULL ?

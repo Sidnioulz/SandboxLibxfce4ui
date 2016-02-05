@@ -7,7 +7,8 @@ AM_CPPFLAGS = \
 	-DLIBEXECDIR=\"$(libexecdir)\" \
 	-DLIBXFCE4UI_VERSION_API=\"$(LIBXFCE4UI_VERSION_API)\" \
 	-DPACKAGE_LOCALE_DIR=\"$(localedir)\" \
-	$(PLATFORM_CPPFLAGS)
+	$(PLATFORM_CPPFLAGS) \
+	-Wno-error=deprecated-declarations
 
 libxfce4ui_enum_headers = \
 	xfce-sm-client.h
@@ -21,6 +22,7 @@ libxfce4ui_headers = \
 	xfce-gtk-extensions.h \
 	xfce-spawn.h \
 	xfce-titled-dialog.h \
+	xfce-workspace.h \
 	$(libxfce4ui_enum_headers)
 
 libxfce4ui_built_sources = \
@@ -43,7 +45,8 @@ libxfce4ui_sources = \
 	xfce-heading.h \
 	xfce-sm-client.c \
 	xfce-spawn.c \
-	xfce-titled-dialog.c
+	xfce-titled-dialog.c \
+	xfce-workspace.c
 
 libxfce4ui_includedir = \
 	$(includedir)/xfce4/libxfce4ui-$(LIBXFCE4UI_VERSION_API)/libxfce4ui
@@ -61,6 +64,7 @@ libxfce4ui_1_la_CFLAGS = \
 	$(GTK2_CFLAGS) \
 	$(LIBSTARTUP_NOTIFICATION_CFLAGS) \
 	$(LIBXFCE4UTIL_CFLAGS) \
+	$(XFCONF_CFLAGS) \
 	$(PLATFORM_CFLAGS)
 
 libxfce4ui_1_la_LDFLAGS = \
@@ -74,6 +78,7 @@ libxfce4ui_1_la_LIBADD = \
 	$(LIBSM_LIBS) \
 	$(GTK2_LIBS) \
 	$(LIBSTARTUP_NOTIFICATION_LIBS) \
+	$(XFCONF_LIBS) \
 	$(LIBXFCE4UTIL_LIBS)
 
 pkgconfigdir = $(libdir)/pkgconfig
@@ -100,6 +105,7 @@ libxfce4ui_2_la_CFLAGS = \
 	$(GTK3_CFLAGS) \
 	$(LIBSTARTUP_NOTIFICATION_CFLAGS) \
 	$(LIBXFCE4UTIL_CFLAGS) \
+	$(XFCONF_CFLAGS) \
 	$(PLATFORM_CFLAGS)
 
 libxfce4ui_2_la_LDFLAGS = \
@@ -113,7 +119,8 @@ libxfce4ui_2_la_LIBADD = \
 	$(LIBSM_LIBS) \
 	$(GTK3_LIBS) \
 	$(LIBSTARTUP_NOTIFICATION_LIBS) \
-	$(LIBXFCE4UTIL_LIBS)
+	$(LIBXFCE4UTIL_LIBS) \
+	$(XFCONF_LIBS)
 
 pkgconfig_DATA += libxfce4ui-2.pc
 

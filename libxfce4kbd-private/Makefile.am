@@ -9,7 +9,8 @@ AM_CPPFLAGS = \
 	-DG_LOG_DOMAIN=\"libxfce4kbd-private\" \
 	-DPACKAGE_LOCALE_DIR=\"$(localedir)\" \
 	-DPREFIX=\"$(prefix)\" \
-	$(PLATFORM_CPPFLAGS)
+	$(PLATFORM_CPPFLAGS) \
+	-Wno-error=deprecated-declarations
 
 libxfce4kbd_headers = \
 	xfce-shortcuts-provider.h \
