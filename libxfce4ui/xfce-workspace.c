@@ -52,6 +52,7 @@
 #include <libxfce4ui/libxfce4ui-private.h>
 #include <libxfce4ui/libxfce4ui-alias.h>
 #include <xfconf/xfconf.h>
+#include <firejail/common.h>
 
 #ifdef HAVE__NSGETENVIRON
 /* for support under apple/darwin */
@@ -61,26 +62,360 @@
 extern gchar **environ;
 #endif
 
+//TODO atexit xfconf_shutdown
+
+static void
+xfce_workspace_xfconf_init (void)
+{
+  static gboolean ini = FALSE;
+
+  if (!ini)
+    {
+      GError *error = NULL;
+      xfconf_init (&error);
+  
+      // we'll try again, just live with it for now
+      if (error)
+        {
+          g_warning ("Warning: libxfce4ui failed to initialise xfconf: %s\n", error->message);
+          g_error_free (error);
+        }
+      else
+        ini = TRUE;
+    }
+}
+
+gboolean
+xfce_workspace_has_locked_clients (gint ws)
+{
+  gboolean has_clients = FALSE;
+  gchar *ws_name = xfce_workspace_get_workspace_name (ws);
+  pid_t result;
+
+  if (!ws_name)
+    return FALSE;
+
+  has_clients = name2pid(ws_name, &result) == 0;
+  g_free (ws_name);
+
+  return has_clients;
+}
 
 
-char *
-xfce_workspace_get_workspace_security_label (gint ws)
+
+gboolean
+xfce_workspace_let_unsandboxed_in (gint ws)
+{
+  XfconfChannel *channel;
+  gchar         *prop;
+  gboolean       let;
+
+  xfce_workspace_xfconf_init();
+  channel = xfconf_channel_get ("xfwm4");
+  prop = g_strdup_printf ("/security/workspace_%d/let_enter_ws", ws);
+  let = xfconf_channel_get_bool (channel, prop, TRUE);
+  g_free (prop);
+
+  return let;
+}
+
+
+
+gboolean
+xfce_workspace_let_sandboxed_out (gint ws)
+{
+  XfconfChannel *channel;
+  gchar         *prop;
+  gboolean       let;
+
+  xfce_workspace_xfconf_init();
+  channel = xfconf_channel_get ("xfwm4");
+  prop = g_strdup_printf ("/security/workspace_%d/let_escape_ws", ws);
+  let = xfconf_channel_get_bool (channel, prop, TRUE);
+  g_free (prop);
+
+  return let;
+}
+
+
+
+gboolean
+xfce_workspace_enable_network (gint ws)
+{
+  XfconfChannel *channel;
+  gchar         *prop;
+  gboolean       let;
+
+  xfce_workspace_xfconf_init();
+  channel = xfconf_channel_get ("xfwm4");
+  prop = g_strdup_printf ("/security/workspace_%d/enable_network", ws);
+  let = xfconf_channel_get_bool (channel, prop, TRUE);
+  g_free (prop);
+
+  return let;
+}
+
+
+
+gboolean
+xfce_workspace_fine_tuned_network (gint ws)
+{
+  XfconfChannel *channel;
+  gchar         *prop;
+  gboolean       let;
+
+  xfce_workspace_xfconf_init();
+  channel = xfconf_channel_get ("xfwm4");
+  prop = g_strdup_printf ("/security/workspace_%d/net_auto", ws);
+  let = xfconf_channel_get_bool (channel, prop, TRUE);
+  g_free (prop);
+
+  return let;
+}
+
+
+
+gboolean
+xfce_workspace_isolate_dbus (gint ws)
+{
+  XfconfChannel *channel;
+  gchar         *prop;
+  gboolean       let;
+
+  xfce_workspace_xfconf_init();
+  channel = xfconf_channel_get ("xfwm4");
+  prop = g_strdup_printf ("/security/workspace_%d/isolate_dbus", ws);
+  let = xfconf_channel_get_bool (channel, prop, TRUE);
+  g_free (prop);
+
+  return let;
+}
+
+
+
+gboolean
+xfce_workspace_enable_overlay (gint ws)
+{
+  XfconfChannel *channel;
+  gchar         *prop;
+  gboolean       let;
+
+  xfce_workspace_xfconf_init();
+  channel = xfconf_channel_get ("xfwm4");
+  prop = g_strdup_printf ("/security/workspace_%d/overlay_fs", ws);
+  let = xfconf_channel_get_bool (channel, prop, TRUE);
+  g_free (prop);
+
+  return let;
+}
+
+
+
+gboolean
+xfce_workspace_enable_private_home (gint ws)
+{
+  XfconfChannel *channel;
+  gchar         *prop;
+  gboolean       let;
+
+  xfce_workspace_xfconf_init();
+  channel = xfconf_channel_get ("xfwm4");
+  prop = g_strdup_printf ("/security/workspace_%d/overlay_fs_private_home", ws);
+  let = xfconf_channel_get_bool (channel, prop, FALSE);
+  g_free (prop);
+
+  return let;
+}
+
+
+
+XfceWorkspaceInBehavior
+xfce_workspace_unsandboxed_in_behavior (gint ws)
+{
+  XfconfChannel *channel;
+  gchar         *prop;
+  gboolean       replace, unsandboxed;
+
+  xfce_workspace_xfconf_init();
+  if (!xfce_workspace_let_unsandboxed_in (ws))
+    return XFCE_WORKSPACE_DONT_ENTER;
+
+  channel = xfconf_channel_get ("xfwm4");
+
+  prop = g_strdup_printf ("/security/workspace_%d/enter_unsandboxed", ws);
+  unsandboxed = xfconf_channel_get_bool (channel, prop, FALSE);
+  g_free (prop);
+  if (unsandboxed)
+    return XFCE_WORKSPACE_ENTER_UNSANDBOXED;
+
+  prop = g_strdup_printf ("/security/workspace_%d/enter_replace", ws);
+  replace = xfconf_channel_get_bool (channel, prop, FALSE);
+  g_free (prop);
+  if (replace)
+    return XFCE_WORKSPACE_ENTER_REPLACE;
+
+  return XFCE_WORKSPACE_ENTER_UNSANDBOXED;
+}
+
+
+static gchar *
+xfce_workspace_name_escape (const gchar *source)
+{
+  const guchar *p;
+  gchar *dest;
+  gchar *q;
+
+  g_return_val_if_fail (source != NULL, NULL);
+
+  p = (guchar *) source;
+  /* Each source byte needs maximally four destination chars (\777) */
+  q = dest = g_malloc (strlen (source) * 4 + 1);
+
+  while (*p)
+    {
+        {
+          switch (*p)
+            {
+            case ' ':
+              *q++ = '\\';
+              *q++ = ' ';
+              break;
+            case '\b':
+              *q++ = '\\';
+              *q++ = 'b';
+              break;
+            case '\f':
+              *q++ = '\\';
+              *q++ = 'f';
+              break;
+            case '\n':
+              *q++ = '\\';
+              *q++ = 'n';
+              break;
+            case '\r':
+              *q++ = '\\';
+              *q++ = 'r';
+              break;
+            case '\t':
+              *q++ = '\\';
+              *q++ = 't';
+              break;
+            case '\v':
+              *q++ = '\\';
+              *q++ = 'v';
+              break;
+            case '\\':
+              *q++ = '\\';
+              *q++ = '\\';
+              break;
+            case '"':
+              *q++ = '\\';
+              *q++ = '"';
+              break;
+            default:
+              if ((*p < ' ') || (*p >= 0177))
+                {
+                  *q++ = '\\';
+                  *q++ = '0' + (((*p) >> 6) & 07);
+                  *q++ = '0' + (((*p) >> 3) & 07);
+                  *q++ = '0' + ((*p) & 07);
+                }
+              else
+                *q++ = *p;
+              break;
+            }
+        }
+      p++;
+    }
+  *q = 0;
+  return dest;
+}
+
+
+
+static gchar *
+_xfce_workspace_get_workspace_name_escaped (gint ws,
+                                            gchar * (*fun)(const gchar *))
 {
   XfconfChannel *channel;
   gchar        **labels;
   gint           i;
 
+  xfce_workspace_xfconf_init();
   channel = xfconf_channel_get ("xfwm4");
-  labels = xfconf_channel_get_string_list (channel, "/workspace_security_labels");
+  labels = xfconf_channel_get_string_list (channel, "/general/workspace_names");
   if (!labels)
     return NULL;
 
   for (i = 0; i < ws && labels[i] != NULL; i++);
 
   if (i == ws)
-    return g_strdup (labels[i]);
+    return fun (labels[i]);
   else
     return NULL;
+}
+
+
+
+gchar *
+xfce_workspace_get_workspace_name_escaped (gint ws)
+{
+  return _xfce_workspace_get_workspace_name_escaped(ws, xfce_workspace_name_escape);
+}
+
+
+
+gchar *
+xfce_workspace_get_workspace_name (gint ws)
+{
+  return _xfce_workspace_get_workspace_name_escaped(ws, g_strdup);
+}
+
+
+
+gchar *
+xfce_workspace_get_workspace_security_label (gint ws)
+{
+  XfconfChannel *channel;
+  gchar        **labels;
+  gint           i;
+
+  xfce_workspace_xfconf_init();
+  channel = xfconf_channel_get ("xfwm4");
+  labels = xfconf_channel_get_string_list (channel, "/security/workspace_security_labels");
+  if (!labels)
+    return g_strdup ("");
+
+  for (i = 0; i < ws && labels[i] != NULL; i++);
+
+  if (i == ws)
+    return g_strdup (labels[i]);
+  else
+    return g_strdup ("");
+}
+
+
+
+gboolean
+xfce_workspace_is_secure (gint ws)
+{
+  XfconfChannel *channel;
+  gchar        **labels;
+  gint           i;
+
+  xfce_workspace_xfconf_init();
+  channel = xfconf_channel_get ("xfwm4");
+  labels = xfconf_channel_get_string_list (channel, "/security/workspace_security_labels");
+  if (!labels) {
+    return FALSE;
+  }
+
+  for (i = 0; i < ws && labels[i] != NULL; i++);
+
+  if (i == ws)
+    return g_strcmp0 (labels[i], "")? TRUE:FALSE;
+  else
+    return FALSE;
 }
 
 

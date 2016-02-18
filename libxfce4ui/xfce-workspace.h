@@ -28,10 +28,32 @@
 
 G_BEGIN_DECLS
 
+typedef enum {
+  XFCE_WORKSPACE_DONT_ENTER = 0,
+  XFCE_WORKSPACE_ENTER_UNSANDBOXED = 1,
+  XFCE_WORKSPACE_ENTER_REPLACE = 2
+} XfceWorkspaceInBehavior;
 
-char *xfce_workspace_get_workspace_security_label (gint ws);
+typedef enum {
+  XFCE_WORKSPACE_DONT_LEAVE = 0,
+  XFCE_WORKSPACE_LEAVE_SANDBOXED = 1
+} XfceWorkspaceOutBehavior;
 
-gint xfce_workspace_get_active_workspace_number (GdkScreen *screen);
+
+gboolean                  xfce_workspace_has_locked_clients           (gint ws);
+gboolean                  xfce_workspace_let_unsandboxed_in           (gint ws);
+gboolean                  xfce_workspace_let_sandboxed_out            (gint ws);
+gboolean                  xfce_workspace_enable_network               (gint ws);
+gboolean                  xfce_workspace_fine_tuned_network           (gint ws);
+gboolean                  xfce_workspace_isolate_dbus                 (gint ws);
+gboolean                  xfce_workspace_enable_overlay               (gint ws);
+gboolean                  xfce_workspace_enable_private_home          (gint ws);
+XfceWorkspaceInBehavior   xfce_workspace_unsandboxed_in_behavior      (gint ws);
+gchar*                    xfce_workspace_get_workspace_name_escaped   (gint ws);
+gchar*                    xfce_workspace_get_workspace_name           (gint ws);
+gchar*                    xfce_workspace_get_workspace_security_label (gint ws);
+gboolean                  xfce_workspace_is_secure                    (gint ws);
+gint                      xfce_workspace_get_active_workspace_number  (GdkScreen *screen);
 
 
 G_END_DECLS

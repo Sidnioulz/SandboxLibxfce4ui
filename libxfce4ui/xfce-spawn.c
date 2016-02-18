@@ -257,6 +257,7 @@ xfce_spawn_on_screen_with_child_watch (GdkScreen    *screen,
                                        GError      **error)
 {
   gboolean            succeed;
+  gboolean            reallocated_argv = FALSE;
   gchar             **cenvp;
   guint               n;
   guint               n_cenvp;
@@ -270,6 +271,10 @@ xfce_spawn_on_screen_with_child_watch (GdkScreen    *screen,
   const gchar        *startup_id;
   const gchar        *prgname;
 #endif
+  gsize argc;
+  gchar **new_argv;
+  gsize index;
+  gchar *ws_name;
 
   g_return_val_if_fail (screen == NULL || GDK_IS_SCREEN (screen), FALSE);
   g_return_val_if_fail ((flags & G_SPAWN_DO_NOT_REAP_CHILD) == 0, FALSE);
@@ -278,6 +283,9 @@ xfce_spawn_on_screen_with_child_watch (GdkScreen    *screen,
   /* lookup the screen with the pointer */
   if (screen == NULL)
     screen = xfce_gdk_screen_get_active (NULL);
+  sn_workspace = xfce_workspace_get_active_workspace_number (screen);
+
+  for (argc = 0; argv[argc]; argc++);
 
   /* setup the child environment (stripping $DESKTOP_STARTUP_ID and $DISPLAY) */
   if (G_LIKELY (envp == NULL))
@@ -296,10 +304,68 @@ xfce_spawn_on_screen_with_child_watch (GdkScreen    *screen,
   cenvp[n_cenvp++] = g_strconcat ("DISPLAY=", display_name, NULL);
   g_free (display_name);
 
+  /* secure workspace support */
+  if (xfce_workspace_is_secure (sn_workspace))
+    {
+      TRACE ("Spawning %s in secure workspace %d, wrapping with Firejail", argv[0], sn_workspace);
+      /* new argv, starting with Firejail's locked workspace mode */
+      new_argv = g_malloc(sizeof (gchar *) * (argc + 100));
+      index = 0;
+
+      new_argv[index++] = g_strdup ("firejail");
+      new_argv[index++] = g_strdup ("--lock-workspace");
+
+      ws_name = xfce_workspace_get_workspace_name (sn_workspace);
+
+      /* find and join the identify box */
+      if (xfce_workspace_has_locked_clients (sn_workspace))
+        {
+          TRACE ("Joining the existing Firejail domain '%s'", ws_name);
+          new_argv[index++] = g_strdup_printf ("--join=%s", ws_name);
+        }
+      /* create a new sandbox, parse all the xfconf options */
+      else
+        {
+          TRACE ("Starting a sandbox in Firejail domain '%s'", ws_name);
+          new_argv[index++] = g_strdup_printf ("--name=%s", ws_name);
+
+          /* network options */
+          if (!xfce_workspace_enable_network (sn_workspace))
+              new_argv[index++] = g_strdup ("--net=none");
+          else
+            {
+              if (xfce_workspace_fine_tuned_network (sn_workspace))
+                  new_argv[index++] = g_strdup ("--net=auto");
+
+              if (!xfce_workspace_isolate_dbus (sn_workspace))
+                  new_argv[index++] = g_strdup ("--dbus=full");
+            }
+
+          /* overlay options */
+          if (xfce_workspace_enable_overlay (sn_workspace))
+            {
+              if (xfce_workspace_enable_private_home (sn_workspace))
+                new_argv[index++] = g_strdup ("--overlay-private-home");
+              else
+                new_argv[index++] = g_strdup ("--overlay");
+            }
+        }
+      
+      g_free (ws_name);
+      /* now, inject the argv parameters and set argv to point to our own pointer */
+      for (n = 0; argv[n]; n++)
+          new_argv[index++] = g_strdup (argv[n]);
+      new_argv[index] = NULL;
+
+      argv = new_argv;
+      reallocated_argv = TRUE;
+    }
+
 #ifdef HAVE_LIBSTARTUP_NOTIFICATION
   /* initialize the sn launcher context */
   if (G_LIKELY (startup_notify))
     {
+      printf("startup notify %s\n", argv[0]);
       sn_display = sn_display_new (GDK_SCREEN_XDISPLAY (screen),
                                    (SnDisplayErrorTrapPush) gdk_error_trap_push,
                                    (SnDisplayErrorTrapPop) gdk_error_trap_pop);
@@ -310,7 +376,6 @@ xfce_spawn_on_screen_with_child_watch (GdkScreen    *screen,
           if (G_LIKELY (sn_launcher != NULL))
             {
               /* initiate the sn launcher context */
-              sn_workspace = xfce_workspace_get_active_workspace_number (screen);
               sn_launcher_context_set_workspace (sn_launcher, sn_workspace);
               sn_launcher_context_set_binary_name (sn_launcher, argv[0]);
               sn_launcher_context_set_icon_name (sn_launcher, startup_icon_name != NULL ?
@@ -354,6 +419,8 @@ xfce_spawn_on_screen_with_child_watch (GdkScreen    *screen,
   succeed = g_spawn_async (working_directory, argv, cenvp, flags, NULL,
                            NULL, &pid, error);
 
+  if (reallocated_argv)
+    g_strfreev(argv);
   g_strfreev (cenvp);
 
   if (G_LIKELY (succeed))

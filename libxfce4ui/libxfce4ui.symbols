@@ -95,6 +95,14 @@ xfce_spawn_command_line_on_screen
 #endif
 #endif
 
+/* xfce-workspace functions */
+#if IN_HEADER(__XFCE_WORKSPACE_H__)
+#if IN_SOURCE(__XFCE_WORKSPACE_C__)
+xfce_workspace_get_workspace_security_label
+xfce_workspace_is_secure
+#endif
+#endif
+
 /* xfce-sm-client functions */
 #if IN_HEADER(__XFCE_SM_CLIENT_H__)
 #if IN_SOURCE(__XFCE_SM_CLIENT_C__)
