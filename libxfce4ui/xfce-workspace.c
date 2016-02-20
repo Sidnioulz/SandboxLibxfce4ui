@@ -229,6 +229,24 @@ xfce_workspace_enable_private_home (gint ws)
 
 
 
+gboolean
+xfce_workspace_disable_sound (gint ws)
+{
+  XfconfChannel *channel;
+  gchar         *prop;
+  gboolean       let;
+
+  xfce_workspace_xfconf_init();
+  channel = xfconf_channel_get ("xfwm4");
+  prop = g_strdup_printf ("/security/workspace_%d/disable_sound", ws);
+  let = xfconf_channel_get_bool (channel, prop, FALSE);
+  g_free (prop);
+
+  return let;
+}
+
+
+
 XfceWorkspaceInBehavior
 xfce_workspace_unsandboxed_in_behavior (gint ws)
 {

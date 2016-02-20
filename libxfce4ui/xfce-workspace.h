@@ -48,6 +48,7 @@ gboolean                  xfce_workspace_fine_tuned_network           (gint ws);
 gboolean                  xfce_workspace_isolate_dbus                 (gint ws);
 gboolean                  xfce_workspace_enable_overlay               (gint ws);
 gboolean                  xfce_workspace_enable_private_home          (gint ws);
+gboolean                  xfce_workspace_disable_sound                (gint ws);
 XfceWorkspaceInBehavior   xfce_workspace_unsandboxed_in_behavior      (gint ws);
 gchar*                    xfce_workspace_get_workspace_name_escaped   (gint ws);
 gchar*                    xfce_workspace_get_workspace_name           (gint ws);

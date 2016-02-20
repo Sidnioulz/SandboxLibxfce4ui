@@ -355,6 +355,12 @@ xfce_spawn_on_screen_with_child_watch (GdkScreen    *screen,
               else
                 new_argv[index++] = g_strdup ("--overlay");
             }
+
+          /* audio options */
+          if (xfce_workspace_disable_sound (sn_workspace))
+            {
+              new_argv[index++] = g_strdup ("--nosound");
+            }
         }
       
       g_free (ws_name);
