@@ -431,7 +431,7 @@ xfce_workspace_is_secure (gint ws)
   for (i = 0; i < ws && labels[i] != NULL; i++);
 
   if (i == ws)
-    return g_strcmp0 (labels[i], "")? TRUE:FALSE;
+    return labels[i] && g_strcmp0 (labels[i], "")? TRUE:FALSE;
   else
     return FALSE;
 }
