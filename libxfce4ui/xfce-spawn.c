@@ -275,10 +275,16 @@ xfce_spawn_on_screen_with_child_watch (GdkScreen    *screen,
   gchar **new_argv;
   gsize index;
   gchar *ws_name;
+  gboolean isFirejail = FALSE;
 
   g_return_val_if_fail (screen == NULL || GDK_IS_SCREEN (screen), FALSE);
   g_return_val_if_fail ((flags & G_SPAWN_DO_NOT_REAP_CHILD) == 0, FALSE);
   g_return_val_if_fail (error == NULL || *error == NULL, FALSE);
+
+  if (argv[0] && (strncmp (argv[0], "firejail ", 9) == 0 ||
+    strncmp (argv[0], "/usr/bin/firejail ", 18) == 0 ||
+    strncmp (argv[0], "/usr/local/bin/firejail ", 24) == 0))
+    isFirejail = TRUE;
 
   /* lookup the screen with the pointer */
   if (screen == NULL)
@@ -305,7 +311,7 @@ xfce_spawn_on_screen_with_child_watch (GdkScreen    *screen,
   g_free (display_name);
 
   /* secure workspace support */
-  if (xfce_workspace_is_secure (sn_workspace))
+  if (!isFirejail && xfce_workspace_is_secure (sn_workspace))
     {
       TRACE ("Spawning %s in secure workspace %d, wrapping with Firejail", argv[0], sn_workspace);
       /* new argv, starting with Firejail's locked workspace mode */
@@ -360,6 +366,7 @@ xfce_spawn_on_screen_with_child_watch (GdkScreen    *screen,
       argv = new_argv;
       reallocated_argv = TRUE;
     }
+
 
 #ifdef HAVE_LIBSTARTUP_NOTIFICATION
   /* initialize the sn launcher context */
