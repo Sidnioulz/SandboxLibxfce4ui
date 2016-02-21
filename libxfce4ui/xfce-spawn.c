@@ -281,8 +281,11 @@ xfce_spawn_on_screen_with_child_watch (GdkScreen    *screen,
   g_return_val_if_fail ((flags & G_SPAWN_DO_NOT_REAP_CHILD) == 0, FALSE);
   g_return_val_if_fail (error == NULL || *error == NULL, FALSE);
 
-  if (argv[0] && (strncmp (argv[0], "firejail ", 9) == 0 ||
+  if (argv[0] && (strcmp (argv[0], "firejail") == 0 ||
+    strncmp (argv[0], "firejail ", 9) == 0 ||
+    strcmp (argv[0], "/usr/bin/firejail") == 0 ||
     strncmp (argv[0], "/usr/bin/firejail ", 18) == 0 ||
+    strcmp (argv[0], "/usr/local/bin/firejail") == 0 ||
     strncmp (argv[0], "/usr/local/bin/firejail ", 24) == 0))
     isFirejail = TRUE;
 
