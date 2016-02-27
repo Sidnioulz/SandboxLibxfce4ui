@@ -52,6 +52,11 @@ void       xfce_dialog_show_warning           (GtkWindow    *parent,
                                                const gchar  *primary_format,
                                                ...) G_GNUC_PRINTF (3, 4);
 
+void       xfce_dialog_show_error_manual      (GtkWindow    *parent,
+                                               const gchar  *error_text,
+                                               const gchar  *primary_format,
+                                               ...) G_GNUC_PRINTF (3, 4);
+
 void       xfce_dialog_show_error             (GtkWindow    *parent,
                                                const GError *error,
                                                const gchar  *primary_format,

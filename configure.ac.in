@@ -127,6 +127,7 @@ dnl *** Check for required packages ***
 dnl ***********************************
 XDT_CHECK_PACKAGE([GOBJECT], [gobject-2.0], [2.30.0])
 XDT_CHECK_PACKAGE([GTK2], [gtk+-2.0], [2.24.0])
+XDT_CHECK_PACKAGE([GLIB], [glib-2.0], [2.36.0])
 XDT_CHECK_PACKAGE([LIBXFCE4UTIL], [libxfce4util-1.0], [4.12.0])
 XDT_CHECK_PACKAGE([FIREJAILUTIL], [libexechelperutils], [0.9.29])
 
@@ -171,6 +172,28 @@ if test x"$with_vendor_info" != x""; then
 else
     AC_MSG_RESULT([not set])
 fi
+
+dnl *********************************************
+dnl *** Check for notification support        ***
+dnl *********************************************
+AC_ARG_WITH(libnotify,
+   AS_HELP_STRING([--with-libnotify], [enable notifications (default=autodetect)]),
+   with_libnotify=$withval,
+   with_libnotify="autodetect")
+HAVE_LIBNOTIFY=0
+if test "$with_libnotify" = "autodetect"; then
+   PKG_CHECK_EXISTS([libnotify], HAVE_LIBNOTIFY=1, )
+fi
+if test "$with_libnotify" = "yes" || test "$HAVE_LIBNOTIFY" = "1"; then
+   with_libnotify="yes"
+   PKG_CHECK_MODULES(LIBNOTIFY, [libnotify])
+   HAVE_LIBNOTIFY=1
+   AC_SUBST(LIBNOTIFY_CFLAGS)
+   AC_SUBST(LIBNOTIFY_LIBS)
+   AC_DEFINE(HAVE_LIBNOTIFY, 1, [LIBNOTIFY support])
+fi
+AC_SUBST(HAVE_LIBNOTIFY)
+AM_CONDITIONAL(HAVE_LIBNOTIFY, [test "$HAVE_LIBNOTIFY" = "1"])
 
 dnl *********************************************
 dnl *** Check for vendor specific information ***
@@ -315,6 +338,7 @@ libxfce4ui/libxfce4ui-2.pc
 libxfce4ui/libxfce4ui-config.h
 libxfce4ui/Makefile
 xfce4-about/Makefile
+xfce4-secure-workspaced/Makefile
 po/Makefile.in
 ])
 

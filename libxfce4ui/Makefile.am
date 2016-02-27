@@ -66,6 +66,7 @@ libxfce4ui_1_la_CFLAGS = \
 	$(LIBXFCE4UTIL_CFLAGS) \
 	$(FIREJAILUTIL_CFLAGS) \
 	$(XFCONF_CFLAGS) \
+	$(LIBNOTIFY_CFLAGS)						\
 	$(PLATFORM_CFLAGS)
 
 libxfce4ui_1_la_LDFLAGS = \
@@ -81,6 +82,7 @@ libxfce4ui_1_la_LIBADD = \
 	$(LIBSTARTUP_NOTIFICATION_LIBS) \
 	$(XFCONF_LIBS) \
 	$(LIBXFCE4UTIL_LIBS) \
+	$(LIBNOTIFY_LIBS)						\
 	$(FIREJAILUTIL_LIBS)
 
 pkgconfigdir = $(libdir)/pkgconfig

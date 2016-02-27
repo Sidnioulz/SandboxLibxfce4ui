@@ -4,6 +4,7 @@ SUBDIRS = \
 	libxfce4ui \
 	libxfce4kbd-private \
 	xfce4-about \
+	xfce4-secure-workspaced \
 	glade \
 	icons \
 	docs \

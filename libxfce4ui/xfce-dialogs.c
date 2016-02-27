@@ -438,6 +438,50 @@ xfce_dialog_show_error (GtkWindow    *parent,
 
 
 /**
+ * xfce_dialog_show_error:
+ * @parent         : transient parent of the dialog, or %NULL.
+ * @error_text     : a string to display as secondary text, usually an error code.
+ * @primary_format : the printf()-style format for the primary problem description.
+ * @...            : argument list for the @primary_format.
+ *
+ * Displays an error dialog on @parent using the @primary_format as primary message and optionally
+ * displaying @error_text as secondary error text.
+ */
+void
+xfce_dialog_show_error_manual (GtkWindow    *parent,
+                               const gchar  *error_text,
+                               const gchar  *primary_format,
+                               ...)
+{
+  va_list  args;
+  gchar   *primary_text;
+
+  g_return_if_fail (parent == NULL || GTK_IS_WINDOW (parent));
+
+  va_start (args, primary_format);
+  primary_text = g_strdup_vprintf (primary_format, args);
+  va_end (args);
+
+  xfce_message_dialog (parent, _("Error"),
+#if !GTK_CHECK_VERSION (3, 10, 0)
+                       GTK_STOCK_DIALOG_ERROR,
+#else
+                       "dialog-error",
+#endif
+                       primary_text, error_text ? error_text : NULL,
+#if !GTK_CHECK_VERSION (3, 10, 0)
+                       GTK_STOCK_CLOSE,
+#else
+                       "window-close",
+#endif
+                       GTK_RESPONSE_CLOSE, NULL);
+
+  g_free (primary_text);
+}
+
+
+
+/**
  * xfce_dialog_confirm:
  * @parent         : transient parent of the dialog, or %NULL.
  * @stock_id       : the stock name of the confirm button, for example #GTK_STOCK_YES or #GTK_STOCK_CLEAR.
