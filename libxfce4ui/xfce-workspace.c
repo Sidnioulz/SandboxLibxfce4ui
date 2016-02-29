@@ -369,11 +369,6 @@ _xfce_workspace_get_workspace_name_escaped (gint ws,
   for (i = 0; i < ws && labels[i] != NULL; i++);
 
   if (i == ws)
-    return fun (labels[i]);
-  else
-    return NULL;
-
-  if (i == ws)
     ret = fun (labels[i]);
   else
     ret = NULL;
