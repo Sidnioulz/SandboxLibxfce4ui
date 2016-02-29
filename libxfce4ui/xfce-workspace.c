@@ -64,10 +64,11 @@ extern gchar **environ;
 
 //TODO atexit xfconf_shutdown
 
-static void
+static XfconfChannel *
 xfce_workspace_xfconf_init (void)
 {
   static gboolean ini = FALSE;
+  static XfconfChannel *channel = NULL;
 
   if (!ini)
     {
@@ -83,6 +84,14 @@ xfce_workspace_xfconf_init (void)
       else
         ini = TRUE;
     }
+
+  if (!ini)
+    return NULL;
+
+  if (!channel)
+    channel = xfconf_channel_get ("xfwm4");
+
+  return channel;
 }
 
 gboolean
@@ -95,7 +104,7 @@ xfce_workspace_has_locked_clients (gint ws)
   if (!ws_name)
     return FALSE;
 
-  has_clients = name2pid(ws_name, &result) == 0;
+  has_clients = name2pid (ws_name, &result) == 0;
   g_free (ws_name);
 
   return has_clients;
@@ -110,8 +119,7 @@ xfce_workspace_let_unsandboxed_in (gint ws)
   gchar         *prop;
   gboolean       let;
 
-  xfce_workspace_xfconf_init();
-  channel = xfconf_channel_get ("xfwm4");
+  channel = xfce_workspace_xfconf_init ();
   prop = g_strdup_printf ("/security/workspace_%d/let_enter_ws", ws);
   let = xfconf_channel_get_bool (channel, prop, TRUE);
   g_free (prop);
@@ -128,8 +136,7 @@ xfce_workspace_let_sandboxed_out (gint ws)
   gchar         *prop;
   gboolean       let;
 
-  xfce_workspace_xfconf_init();
-  channel = xfconf_channel_get ("xfwm4");
+  channel = xfce_workspace_xfconf_init ();
   prop = g_strdup_printf ("/security/workspace_%d/let_escape_ws", ws);
   let = xfconf_channel_get_bool (channel, prop, TRUE);
   g_free (prop);
@@ -146,8 +153,7 @@ xfce_workspace_enable_network (gint ws)
   gchar         *prop;
   gboolean       let;
 
-  xfce_workspace_xfconf_init();
-  channel = xfconf_channel_get ("xfwm4");
+  channel = xfce_workspace_xfconf_init ();
   prop = g_strdup_printf ("/security/workspace_%d/enable_network", ws);
   let = xfconf_channel_get_bool (channel, prop, TRUE);
   g_free (prop);
@@ -164,8 +170,7 @@ xfce_workspace_fine_tuned_network (gint ws)
   gchar         *prop;
   gboolean       let;
 
-  xfce_workspace_xfconf_init();
-  channel = xfconf_channel_get ("xfwm4");
+  channel = xfce_workspace_xfconf_init ();
   prop = g_strdup_printf ("/security/workspace_%d/net_auto", ws);
   let = xfconf_channel_get_bool (channel, prop, TRUE);
   g_free (prop);
@@ -182,8 +187,7 @@ xfce_workspace_isolate_dbus (gint ws)
   gchar         *prop;
   gboolean       let;
 
-  xfce_workspace_xfconf_init();
-  channel = xfconf_channel_get ("xfwm4");
+  channel = xfce_workspace_xfconf_init ();
   prop = g_strdup_printf ("/security/workspace_%d/isolate_dbus", ws);
   let = xfconf_channel_get_bool (channel, prop, TRUE);
   g_free (prop);
@@ -200,8 +204,7 @@ xfce_workspace_enable_overlay (gint ws)
   gchar         *prop;
   gboolean       let;
 
-  xfce_workspace_xfconf_init();
-  channel = xfconf_channel_get ("xfwm4");
+  channel = xfce_workspace_xfconf_init ();
   prop = g_strdup_printf ("/security/workspace_%d/overlay_fs", ws);
   let = xfconf_channel_get_bool (channel, prop, TRUE);
   g_free (prop);
@@ -218,8 +221,7 @@ xfce_workspace_enable_private_home (gint ws)
   gchar         *prop;
   gboolean       let;
 
-  xfce_workspace_xfconf_init();
-  channel = xfconf_channel_get ("xfwm4");
+  channel = xfce_workspace_xfconf_init ();
   prop = g_strdup_printf ("/security/workspace_%d/overlay_fs_private_home", ws);
   let = xfconf_channel_get_bool (channel, prop, FALSE);
   g_free (prop);
@@ -236,8 +238,7 @@ xfce_workspace_disable_sound (gint ws)
   gchar         *prop;
   gboolean       let;
 
-  xfce_workspace_xfconf_init();
-  channel = xfconf_channel_get ("xfwm4");
+  channel = xfce_workspace_xfconf_init ();
   prop = g_strdup_printf ("/security/workspace_%d/disable_sound", ws);
   let = xfconf_channel_get_bool (channel, prop, FALSE);
   g_free (prop);
@@ -358,9 +359,9 @@ _xfce_workspace_get_workspace_name_escaped (gint ws,
   XfconfChannel *channel;
   gchar        **labels;
   gint           i;
+  gchar         *ret;
 
-  xfce_workspace_xfconf_init();
-  channel = xfconf_channel_get ("xfwm4");
+  channel = xfce_workspace_xfconf_init ();
   labels = xfconf_channel_get_string_list (channel, "/general/workspace_names");
   if (!labels)
     return NULL;
@@ -371,6 +372,14 @@ _xfce_workspace_get_workspace_name_escaped (gint ws,
     return fun (labels[i]);
   else
     return NULL;
+
+  if (i == ws)
+    ret = fun (labels[i]);
+  else
+    ret = NULL;
+
+  g_strfreev (labels);
+  return ret;
 }
 
 
@@ -397,9 +406,9 @@ xfce_workspace_get_workspace_security_label (gint ws)
   XfconfChannel *channel;
   gchar        **labels;
   gint           i;
+  gchar         *ret;
 
-  xfce_workspace_xfconf_init();
-  channel = xfconf_channel_get ("xfwm4");
+  channel = xfce_workspace_xfconf_init ();
   labels = xfconf_channel_get_string_list (channel, "/security/workspace_security_labels");
   if (!labels)
     return g_strdup ("");
@@ -407,9 +416,12 @@ xfce_workspace_get_workspace_security_label (gint ws)
   for (i = 0; i < ws && labels[i] != NULL; i++);
 
   if (i == ws)
-    return g_strdup (labels[i]);
+    ret = g_strdup (labels[i]);
   else
-    return g_strdup ("");
+    ret = g_strdup ("");
+
+  g_strfreev (labels);
+  return ret;
 }
 
 
@@ -420,9 +432,9 @@ xfce_workspace_is_secure (gint ws)
   XfconfChannel *channel;
   gchar        **labels;
   gint           i;
+  gboolean       ret;
 
-  xfce_workspace_xfconf_init();
-  channel = xfconf_channel_get ("xfwm4");
+  channel = xfce_workspace_xfconf_init ();
   labels = xfconf_channel_get_string_list (channel, "/security/workspace_security_labels");
   if (!labels) {
     return FALSE;
@@ -431,9 +443,12 @@ xfce_workspace_is_secure (gint ws)
   for (i = 0; i < ws && labels[i] != NULL; i++);
 
   if (i == ws)
-    return labels[i] && g_strcmp0 (labels[i], "")? TRUE:FALSE;
+    ret = labels[i] && g_strcmp0 (labels[i], "")? TRUE:FALSE;
   else
-    return FALSE;
+    ret = FALSE;
+
+  g_strfreev (labels);
+  return ret;
 }
 
 
