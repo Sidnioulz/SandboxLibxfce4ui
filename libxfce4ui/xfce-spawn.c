@@ -355,7 +355,7 @@ xfce_spawn_secure_workspace_daemon (GdkScreen    *screen,
   for (n_cenvp = n = 0; envp[n] != NULL; ++n)
     {
       if (strncmp (envp[n], "DESKTOP_STARTUP_ID", 18) != 0
-          && strncmp (envp[n], "PATH", 7) != 0)
+          && strncmp (envp[n], "PATH", 4) != 0)
         cenvp[n_cenvp++] = envp[n];
     }
 
@@ -425,7 +425,7 @@ xfce_spawn_secure_workspace_daemon (GdkScreen    *screen,
   argv[index] = NULL;
 
   /* try to spawn the new process */
-  succeed = g_spawn_async (NULL, argv, envp, G_SPAWN_SEARCH_PATH_FROM_ENVP, NULL,
+  succeed = g_spawn_async (NULL, argv, cenvp, G_SPAWN_SEARCH_PATH_FROM_ENVP, NULL,
                            NULL, &pid, error);
 
   g_strfreev (argv);
