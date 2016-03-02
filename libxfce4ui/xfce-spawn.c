@@ -467,6 +467,42 @@ xfce_spawn_secure_workspace_daemon (GdkScreen    *screen,
 
 
 
+static gboolean
+xfce_client_is_xfce (gchar *client)
+{
+    gchar *name = client;
+
+    if (!name)
+        return FALSE;
+
+    if (name[0] == '/')
+        name = strrchr (name, '/');
+
+    return g_strcmp0 (name, "xfce4-panel") == 0             || g_strcmp0 (name, "xfdesktop") == 0 ||
+           g_strcmp0 (name, "notify-osd") == 0              || g_strcmp0 (name, "xfce4-notifyd") == 0 ||
+           g_strcmp0 (name, "xfce4-appfinder") == 0         || g_strcmp0 (name, "xfdesktop-settings") == 0 ||
+           g_strcmp0 (name, "xfce4-mouse-settings") == 0    || g_strcmp0 (name, "xfce4-power-manager-settings") == 0 ||
+           g_strcmp0 (name, "xfce4-session-settings") == 0  || g_strcmp0 (name, "xfce4-accessibility-settings") == 0 ||
+           g_strcmp0 (name, "xfce4-display-settings") == 0  || g_strcmp0 (name, "xfce4-appearance-settings") == 0 ||
+           g_strcmp0 (name, "xfce4-keyboard-settings") == 0 || g_strcmp0 (name, "xfce4-notes-settings") == 0 ||
+           g_strcmp0 (name, "xfce4-screenshooter") == 0     || g_strcmp0 (name, "xfce4-taskmanager") == 0 ||
+           g_strcmp0 (name, "xfce4-notifyd-config") == 0    || g_strcmp0 (name, "xfce4-settings-manager") == 0 ||
+           g_strcmp0 (name, "xfce4-mime-settings") == 0     || g_strcmp0 (name, "xfce4-session-logout") == 0 ||
+           g_strcmp0 (name, "xfce4-clipman-settings") == 0  || g_strcmp0 (name, "Mugshot") == 0 ||
+           g_strcmp0 (name, "xfce4-clipman") == 0           || g_strcmp0 (name, "menulibre") == 0||
+           g_strcmp0 (name, "xfce4-mixer") == 0             || g_strcmp0 (name, "xfce4-about") == 0||
+           g_strcmp0 (name, "pavucontrol") == 0             || g_strcmp0 (name, "xfce4-popup-applicationsmenu") == 0||
+           g_strcmp0 (name, "xfce4-pm-helper") == 0         || g_strcmp0 (name, "xfce4-popup-clipman") == 0||
+           g_strcmp0 (name, "xfce4-popup-directorymenu") == 0            || g_strcmp0 (name, "xfce4-popup-notes") == 0||
+           g_strcmp0 (name, "xfce4-popup-notes") == 0            || g_strcmp0 (name, "xfce4-notes") == 0||
+           g_strcmp0 (name, "xfce4-popup-whiskermenu") == 0            || g_strcmp0 (name, "xfce4-popup-windowmenu") == 0||
+           g_strcmp0 (name, "xfce4-power-manager") == 0            || g_strcmp0 (name, "xfce4-sensors") == 0||
+           g_strcmp0 (name, "xfce4-session") == 0            || g_strcmp0 (name, "xfce4-settings-editor") == 0||
+           g_strcmp0 (name, "xfce4-volumed") == 0            || g_strcmp0 (name, "xfce4-volumed-pulse") == 0;
+}
+
+
+
 /**
  * xfce_spawn_on_screen_with_closure:
  * @screen              : a #GdkScreen or %NULL to use the active screen,
@@ -594,7 +630,7 @@ xfce_spawn_on_screen_with_child_watch (GdkScreen    *screen,
   g_free (display_name);
 
   /* secure workspace support */
-  if (!is_firejail && xfce_workspace_is_secure (sn_workspace))
+  if (!is_firejail && xfce_workspace_is_secure (sn_workspace) && !xfce_client_is_xfce (argv[0]))
     {
       TRACE ("Spawning %s in secure workspace %d, wrapping with Firejail", argv[0], sn_workspace);
 
