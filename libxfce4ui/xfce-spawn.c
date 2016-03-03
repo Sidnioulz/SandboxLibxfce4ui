@@ -106,6 +106,9 @@ typedef struct {
 #ifdef HAVE_LIBNOTIFY
   NotifyNotification *notification;
 #endif
+  gboolean      launched;
+  gboolean      succeed;
+  GMainLoop    *loop;
 } XfceSpawnWatchData;
 
 #ifdef HAVE_LIBSTARTUP_NOTIFICATION
@@ -265,25 +268,31 @@ xfce_spawn_on_secure_workspace_ready (GFileMonitor     *monitor,
             }
 #endif
         }
-    
+
       g_signal_handlers_disconnect_by_func (monitor, xfce_spawn_on_secure_workspace_ready, data);
       g_object_unref (monitor);
 
-      g_unlink (data->monitor_path);
+      if (g_main_loop_is_running (data->loop))
+        g_main_loop_quit (data->loop);
 
-      g_free (data->ws_name);
-      g_free (data->working_directory);
-      g_free (data->startup_icon_name);
-      g_free (data->monitor_path);
-      g_strfreev (data->argv);
-      g_strfreev (data->envp);
-      g_object_unref (data->screen);
-#ifdef HAVE_LIBNOTIFY
-      if (data->notification)
-        g_object_unref (data->notification);
-#endif
-      g_slice_free (XfceSpawnWatchData, data);
+      data->launched = TRUE;
+      data->succeed = succeed;
     }
+}
+
+
+
+static gboolean
+xfce_spawn_shutdown_polling_loop (gpointer user_data)
+{
+  XfceSpawnWatchData *data = (XfceSpawnWatchData *) user_data;
+
+  g_return_val_if_fail (data != NULL, FALSE);
+
+  if (g_main_loop_is_running (data->loop))
+    g_main_loop_quit (data->loop);
+
+  return FALSE;
 }
 
 
@@ -303,7 +312,7 @@ xfce_spawn_secure_workspace_daemon (GdkScreen    *screen,
                                     gchar       **envp,
                                     GError      **error)
 {
-  gboolean            succeed;
+  gboolean            succeed = FALSE;
   gchar             **argv;
   GPid                pid;
   gchar             **cenvp;
@@ -315,6 +324,7 @@ xfce_spawn_secure_workspace_daemon (GdkScreen    *screen,
   GFileMonitor       *monitor;
   gchar              *monitor_path;
   XfceSpawnWatchData *data;
+  GFile              *file;
 
 #ifdef HAVE_LIBNOTIFY
 #if NOTIFY_CHECK_VERSION (0, 7, 0)
@@ -424,43 +434,84 @@ xfce_spawn_secure_workspace_daemon (GdkScreen    *screen,
   g_unlink (monitor_path);
   argv[index] = NULL;
 
+  /* start monitoring changes to the file */
+  file = g_file_new_for_path (monitor_path);
+  if (!file)
+    {
+      g_set_error (error, G_SPAWN_ERROR, G_SPAWN_ERROR_FAILED,
+                   _("Failed to setup a monitor for the file path where we await a notification from the secure workspace daemon"));
+      return FALSE;
+    }
+
+  monitor = g_file_monitor_file (file, G_FILE_MONITOR_NONE, NULL, error);
+  if (error && *error)
+    {
+      return FALSE;
+    }
+
+  data = g_slice_new0 (XfceSpawnWatchData);
+
+  data->screen                = g_object_ref (screen);
+  data->working_directory     = g_strdup (working_directory);
+  data->argv                  = g_strdupv (spawn_argv);
+  data->envp                  = g_strdupv (spawn_envp);
+  data->flags                 = spawn_flags;
+  data->startup_notify        = startup_notify;
+  data->startup_timestamp     = startup_timestamp;
+  data->startup_icon_name     = g_strdup (startup_icon_name);
+  data->child_watch_closure   = child_watch_closure;
+  data->monitor_path          = monitor_path;
+  data->ws_name               = g_strdup (ws_name);
+#ifdef HAVE_LIBNOTIFY
+  data->notification          = notification;
+#endif
+
+  /* make sure a main loop exists to handle the file monitor's signals */
+  data->loop                  = g_main_loop_new (NULL, FALSE);
+
+  g_signal_connect (G_OBJECT (monitor), "changed", G_CALLBACK (xfce_spawn_on_secure_workspace_ready), data);
+
   /* try to spawn the new process */
   succeed = g_spawn_async (NULL, argv, cenvp, G_SPAWN_SEARCH_PATH_FROM_ENVP, NULL,
                            NULL, &pid, error);
 
+  if (G_LIKELY (succeed))
+    {
+      /* run the loop for up to five seconds */
+      g_timeout_add (5000, xfce_spawn_shutdown_polling_loop, data);
+      g_main_loop_run (data->loop);
+
+      /* clean-up now the loop is gone */
+      g_signal_handlers_disconnect_by_func (monitor, xfce_spawn_on_secure_workspace_ready, data);
+      g_main_loop_unref (data->loop);
+
+      /* check if the intended client was launched within the given five seconds */
+      succeed = (data->launched && data->succeed);
+      if (!succeed)
+        g_set_error (error, G_SPAWN_ERROR, G_SPAWN_ERROR_FAILED,
+                     _("Failed to receive notification from the secure workspace daemon that the sandbox is initialized"));
+    }
+
+  /* clean up local memory */    
   g_strfreev (argv);
   g_free (cenvp);
   g_free (new_path);
 
-  if (G_LIKELY (succeed))
-    {
-      monitor = g_file_monitor_file (g_file_new_for_path (monitor_path),
-                                     G_FILE_MONITOR_NONE,
-                                     NULL,
-                                     error);
+  /* clean up the data object */
+  g_unlink (data->monitor_path);
 
-      if (!monitor)
-        return FALSE;
-
-      data = g_slice_new0 (XfceSpawnWatchData);
-
-      data->screen                = g_object_ref (screen);
-      data->working_directory     = g_strdup (working_directory);
-      data->argv                  = g_strdupv (spawn_argv);
-      data->envp                  = g_strdupv (spawn_envp);
-      data->flags                 = spawn_flags;
-      data->startup_notify        = startup_notify;
-      data->startup_timestamp     = startup_timestamp;
-      data->startup_icon_name     = g_strdup (startup_icon_name);
-      data->child_watch_closure   = child_watch_closure;
-      data->monitor_path          = monitor_path;
-      data->ws_name               = g_strdup (ws_name);
+  g_free (data->ws_name);
+  g_free (data->working_directory);
+  g_free (data->startup_icon_name);
+  g_free (data->monitor_path);
+  g_strfreev (data->argv);
+  g_strfreev (data->envp);
+  g_object_unref (data->screen);
 #ifdef HAVE_LIBNOTIFY
-      data->notification          = notification;
+  if (data->notification)
+    g_object_unref (data->notification);
 #endif
-
-      g_signal_connect (G_OBJECT (monitor), "changed", G_CALLBACK (xfce_spawn_on_secure_workspace_ready), data);
-    }
+  g_slice_free (XfceSpawnWatchData, data);
 
   return succeed;
 }
@@ -632,9 +683,9 @@ xfce_spawn_on_screen_with_child_watch (GdkScreen    *screen,
   /* secure workspace support */
   if (!is_firejail && xfce_workspace_is_secure (sn_workspace) && !xfce_client_is_xfce (argv[0]))
     {
-      TRACE ("Spawning %s in secure workspace %d, wrapping with Firejail", argv[0], sn_workspace);
-
       ws_name = xfce_workspace_get_workspace_name (sn_workspace);
+
+      TRACE ("Spawning %s in secure workspace %s (#%d), wrapping with Firejail", argv[0], ws_name, sn_workspace);
 
       /* if there are no clients yet, ensure the secure workspace daemon runs, to make the sandbox persistent */
       if (!xfce_workspace_has_locked_clients (sn_workspace))

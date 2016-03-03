@@ -403,6 +403,10 @@ xfce_workspace_get_workspace_security_label (gint ws)
   gint           i;
   gchar         *ret;
 
+  /* we don't sandbox workspace 1 as it is where daemons spawn on startup */
+  if (ws==0)
+    return g_strdup ("");
+
   channel = xfce_workspace_xfconf_init ();
   labels = xfconf_channel_get_string_list (channel, "/security/workspace_security_labels");
   if (!labels)
@@ -428,6 +432,10 @@ xfce_workspace_is_secure (gint ws)
   gchar        **labels;
   gint           i;
   gboolean       ret;
+
+  /* we don't sandbox workspace 1 as it is where daemons spawn on startup */
+  if (ws==0)
+    return FALSE;
 
   channel = xfce_workspace_xfconf_init ();
   labels = xfconf_channel_get_string_list (channel, "/security/workspace_security_labels");

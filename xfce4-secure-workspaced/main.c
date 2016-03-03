@@ -141,7 +141,7 @@ main (gint    argc,
   if (argc < 2)
     {
       xfce_dialog_show_error_manual (NULL, _("The Xfce secure workspace daemon was invoked improperly."), _("Failed to initialize secure workspace"));
-      g_error (_("%s %s (Xfce %s)\n\nUsage: %s \"SANDBOX NAME\" \"PATH TO NOTIFY FILE\"\n"), G_LOG_DOMAIN, PACKAGE_VERSION, xfce_version_string (), G_LOG_DOMAIN);
+      g_error (_("%s %s (Xfce %s)\n\nUsage: %s \"PATH TO NOTIFY FILE\"\n"), G_LOG_DOMAIN, PACKAGE_VERSION, xfce_version_string (), G_LOG_DOMAIN);
       return EXIT_FAILURE;
     }
 
