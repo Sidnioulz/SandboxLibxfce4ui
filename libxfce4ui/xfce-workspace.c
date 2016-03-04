@@ -117,15 +117,16 @@ xfce_workspace_let_unsandboxed_in (gint ws)
 {
   XfconfChannel *channel;
   gchar         *prop;
-  gboolean       let;
+  gboolean       lockout;
 
   channel = xfce_workspace_xfconf_init ();
-  prop = g_strdup_printf ("/security/workspace_%d/let_enter_ws", ws);
-  let = xfconf_channel_get_bool (channel, prop, TRUE);
+  prop = g_strdup_printf ("/security/workspace_%d/unsandboxed_lock_out", ws);
+  lockout = xfconf_channel_get_bool (channel, prop, TRUE);
   g_free (prop);
 
-  return let;
+  return !lockout;
 }
+
 
 
 
@@ -137,8 +138,8 @@ xfce_workspace_let_sandboxed_out (gint ws)
   gboolean       let;
 
   channel = xfce_workspace_xfconf_init ();
-  prop = g_strdup_printf ("/security/workspace_%d/let_escape_ws", ws);
-  let = xfconf_channel_get_bool (channel, prop, TRUE);
+  prop = g_strdup_printf ("/security/workspace_%d/sandbox_escape", ws);
+  let = xfconf_channel_get_bool (channel, prop, FALSE);
   g_free (prop);
 
   return let;
@@ -253,7 +254,7 @@ xfce_workspace_unsandboxed_in_behavior (gint ws)
 {
   XfconfChannel *channel;
   gchar         *prop;
-  gboolean       replace, unsandboxed;
+  gboolean       replace, lockout, unsandboxed;
 
   xfce_workspace_xfconf_init();
   if (!xfce_workspace_let_unsandboxed_in (ws))
@@ -261,19 +262,25 @@ xfce_workspace_unsandboxed_in_behavior (gint ws)
 
   channel = xfconf_channel_get ("xfwm4");
 
-  prop = g_strdup_printf ("/security/workspace_%d/enter_unsandboxed", ws);
-  unsandboxed = xfconf_channel_get_bool (channel, prop, FALSE);
+  prop = g_strdup_printf ("/security/workspace_%d/unsandboxed_lock_out", ws);
+  lockout = xfconf_channel_get_bool (channel, prop, TRUE);
+  g_free (prop);
+  if (lockout)
+    return XFCE_WORKSPACE_DONT_ENTER;
+
+  prop = g_strdup_printf ("/security/workspace_%d/unsandboxed_enter", ws);
+  unsandboxed = xfconf_channel_get_bool (channel, prop, TRUE);
   g_free (prop);
   if (unsandboxed)
     return XFCE_WORKSPACE_ENTER_UNSANDBOXED;
 
-  prop = g_strdup_printf ("/security/workspace_%d/enter_replace", ws);
+  prop = g_strdup_printf ("/security/workspace_%d/unsandboxed_replace", ws);
   replace = xfconf_channel_get_bool (channel, prop, FALSE);
   g_free (prop);
   if (replace)
     return XFCE_WORKSPACE_ENTER_REPLACE;
 
-  return XFCE_WORKSPACE_ENTER_UNSANDBOXED;
+  return XFCE_WORKSPACE_DONT_ENTER;
 }
 
 
