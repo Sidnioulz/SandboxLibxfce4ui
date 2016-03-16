@@ -33,7 +33,6 @@
 #include <glib.h>
 #include <gio/gdesktopappinfo.h>
 
-#include <libxfce4ui/xfce-firejail-utils.h>
 #include <libxfce4ui/xfce-firejail-widget.h>
 #include <libxfce4ui/xfce-firejail-widget-ui.h>
 #include <libxfce4ui/libxfce4ui-private.h>

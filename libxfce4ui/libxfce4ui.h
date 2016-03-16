@@ -32,7 +32,6 @@
 #include <libxfce4ui/xfce-sm-client.h>
 #include <libxfce4ui/xfce-titled-dialog.h>
 #include <libxfce4ui/xfce-workspace.h>
-#include <libxfce4ui/xfce-firejail-utils.h>
 #include <libxfce4ui/xfce-firejail-widget.h>
 #include <libxfce4ui/libxfce4ui-enum-types.h>
 
