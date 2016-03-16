@@ -55,6 +55,7 @@ gchar*                    xfce_workspace_get_workspace_name           (gint ws);
 gchar*                    xfce_workspace_get_workspace_security_label (gint ws);
 gboolean                  xfce_workspace_is_secure                    (gint ws);
 gint                      xfce_workspace_get_active_workspace_number  (GdkScreen *screen);
+gboolean                  xfce_workspace_is_active_secure             (GdkScreen *screen);
 
 
 G_END_DECLS

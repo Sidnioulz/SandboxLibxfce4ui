@@ -523,5 +523,14 @@ xfce_workspace_get_active_workspace_number (GdkScreen *screen)
 
 
 
+gboolean
+xfce_workspace_is_active_secure (GdkScreen *screen)
+{
+  gint ws = xfce_workspace_get_active_workspace_number(screen);
+  return xfce_workspace_is_secure (ws);
+}
+
+
+
 #define __XFCE_WORKSPACE_C__
 #include <libxfce4ui/libxfce4ui-aliasdef.c>
