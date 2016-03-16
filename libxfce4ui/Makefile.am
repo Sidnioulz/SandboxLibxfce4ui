@@ -17,6 +17,8 @@ libxfce4ui_headers = \
 	libxfce4ui.h \
 	libxfce4ui-config.h \
 	libxfce4ui-enum-types.h \
+	xfce-firejail-utils.h \
+	xfce-firejail-widget.h \
 	xfce-dialogs.h \
 	xfce-gdk-extensions.h \
 	xfce-gtk-extensions.h \
@@ -31,7 +33,8 @@ libxfce4ui_built_sources = \
 	libxfce4ui-enum-types.c \
 	libxfce4ui-enum-types.h \
 	libxfce4ui-marshal.c \
-	libxfce4ui-marshal.h
+	libxfce4ui-marshal.h \
+	xfce-firejail-widget-ui.h
 
 libxfce4ui_sources = \
 	$(libxfce4ui_headers) \
@@ -39,6 +42,8 @@ libxfce4ui_sources = \
 	libxfce4ui-config.c \
 	libxfce4ui-private.h \
 	xfce-dialogs.c \
+	xfce-firejail-utils.c \
+	xfce-firejail-widget.c \
 	xfce-gdk-extensions.c \
 	xfce-gtk-extensions.c \
 	xfce-heading.c \
@@ -62,6 +67,7 @@ libxfce4ui_1_la_SOURCES = \
 libxfce4ui_1_la_CFLAGS = \
 	$(LIBSM_CFLAGS) \
 	$(GTK2_CFLAGS) \
+	$(GIO_UNIX_CFLAGS) \
 	$(LIBSTARTUP_NOTIFICATION_CFLAGS) \
 	$(LIBXFCE4UTIL_CFLAGS) \
 	$(FIREJAILUTIL_CFLAGS) \
@@ -79,6 +85,7 @@ libxfce4ui_1_la_LDFLAGS = \
 libxfce4ui_1_la_LIBADD = \
 	$(LIBSM_LIBS) \
 	$(GTK2_LIBS) \
+	$(GIO_UNIX_LIBS) \
 	$(LIBSTARTUP_NOTIFICATION_LIBS) \
 	$(XFCONF_LIBS) \
 	$(LIBXFCE4UTIL_LIBS) \
@@ -107,6 +114,7 @@ libxfce4ui_2_la_SOURCES = \
 libxfce4ui_2_la_CFLAGS = \
 	$(LIBSM_CFLAGS) \
 	$(GTK3_CFLAGS) \
+	$(GIO_UNIX_CFLAGS) \
 	$(LIBSTARTUP_NOTIFICATION_CFLAGS) \
 	$(LIBXFCE4UTIL_CFLAGS) \
 	$(FIREJAILUTIL_CFLAGS) \
@@ -123,6 +131,7 @@ libxfce4ui_2_la_LDFLAGS = \
 libxfce4ui_2_la_LIBADD = \
 	$(LIBSM_LIBS) \
 	$(GTK3_LIBS) \
+	$(GIO_UNIX_LIBS) \
 	$(LIBSTARTUP_NOTIFICATION_LIBS) \
 	$(LIBXFCE4UTIL_LIBS) \
 	$(FIREJAILUTIL_LIBS) \
@@ -142,6 +151,9 @@ endif
 ## files as part of the dist tarball.
 ##
 if MAINTAINER_MODE
+xfce-firejail-widget-ui.h: $(srcdir)/xfce-firejail-widget.glade Makefile
+	$(AM_V_GEN) xdt-csource --static --strip-comments --strip-content --name=xfce_firejail_widget_ui $< >$@
+
 CLEANFILES = \
 	actual-abi \
 	expected-abi
@@ -206,7 +218,8 @@ EXTRA_DIST = \
 	libxfce4ui.symbols \
 	libxfce4ui-alias.h \
 	libxfce4ui-aliasdef.c \
-	make-libxfce4ui-alias.pl
+	make-libxfce4ui-alias.pl \
+	xfce-firejail-widget.glade
 
 if HAVE_GNUC_VISIBILITY
 TESTS = abicheck.sh

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007 The Xfce Development Team
+ * Copyright (c) 2016 Steve Dodier-Lazaro <sidi@xfce.org>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -17,25 +17,21 @@
  * MA 02110-1301 USA
  */
 
-#ifndef __LIBXFCE4UI_H__
-#define __LIBXFCE4UI_H__
+#if !defined (LIBXFCE4UI_INSIDE_LIBXFCE4UI_H) && !defined (LIBXFCE4UI_COMPILATION)
+#error "Only <libxfce4ui/libxfce4ui.h> can be included directly, this file is not part of the public API."
+#endif
 
-#include <libxfce4util/libxfce4util.h>
+#ifndef __XFCE_FIREJAIL_UTILS_H__
+#define __XFCE_FIREJAIL_UTILS_H__
 
-#define LIBXFCE4UI_INSIDE_LIBXFCE4UI_H
+#include <glib.h>
+#include <firejail/exechelper.h>
 
-#include <libxfce4ui/libxfce4ui-config.h>
-#include <libxfce4ui/xfce-dialogs.h>
-#include <libxfce4ui/xfce-gdk-extensions.h>
-#include <libxfce4ui/xfce-gtk-extensions.h>
-#include <libxfce4ui/xfce-spawn.h>
-#include <libxfce4ui/xfce-sm-client.h>
-#include <libxfce4ui/xfce-titled-dialog.h>
-#include <libxfce4ui/xfce-workspace.h>
-#include <libxfce4ui/xfce-firejail-utils.h>
-#include <libxfce4ui/xfce-firejail-widget.h>
-#include <libxfce4ui/libxfce4ui-enum-types.h>
+G_BEGIN_DECLS
 
-#undef LIBXFCE4UI_INSIDE_LIBXFCE4UI_H
+GList *    xfce_get_firejail_profile_names    (gboolean insert_generic);
+gchar*     xfce_get_firejail_profile_for_name (const gchar *name);
 
-#endif /* !__LIBXFCE4UI_H__ */
+G_END_DECLS
+
+#endif /* !__XFCE_FIREJAIL_UTILS_H__ */

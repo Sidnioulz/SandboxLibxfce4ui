@@ -47,6 +47,7 @@ libxfce4kbd_private_2_la_CFLAGS = \
 	$(PLATFORM_CFLAGS) \
 	$(GLIB_CFLAGS) \
 	$(GTK2_CFLAGS) \
+	$(GIO_UNIX_CFLAGS) \
 	$(LIBX11_CFLAGS) \
 	$(LIBXFCE4UTIL_CFLAGS) \
 	$(XFCONF_CFLAGS) \
@@ -64,6 +65,7 @@ libxfce4kbd_private_2_la_LIBADD = \
 	$(top_builddir)/libxfce4ui/libxfce4ui-$(LIBXFCE4UI_VERSION_API).la \
 	$(GLIB_LIBS) \
 	$(GTK2_LIBS) \
+	$(GIO_UNIX_LIBS) \
 	$(LIBX11_LIBS) \
 	$(LIBXFCE4UTIL_LIBS) \
 	$(XFCONF_LIBS)
@@ -91,6 +93,7 @@ libxfce4kbd_private_3_la_CFLAGS = \
 	$(PLATFORM_CFLAGS) \
 	$(GLIB_CFLAGS) \
 	$(GTK3_CFLAGS) \
+	$(GIO_UNIX_CFLAGS) \
 	$(LIBX11_CFLAGS) \
 	$(LIBXFCE4UTIL_CFLAGS) \
 	$(XFCONF_CFLAGS) \
@@ -108,6 +111,7 @@ libxfce4kbd_private_3_la_LIBADD = \
 	$(top_builddir)/libxfce4ui/libxfce4ui-2.la \
 	$(GLIB_LIBS) \
 	$(GTK3_LIBS) \
+	$(GIO_UNIX_LIBS) \
 	$(LIBX11_LIBS) \
 	$(LIBXFCE4UTIL_LIBS) \
 	$(XFCONF_LIBS)

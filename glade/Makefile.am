@@ -22,6 +22,7 @@ libxfce4uiglade_la_SOURCES  = \
 libxfce4uiglade_la_CFLAGS = \
 	$(GLADEUI_CFLAGS) \
 	$(LIBXFCE4UTIL_CFLAGS) \
+	$(GIO_UNIX_CFLAGS) \
 	$(PLATFORM_CFLAGS)
 
 libxfce4uiglade_la_LDFLAGS = \
@@ -33,6 +34,7 @@ libxfce4uiglade_la_LDFLAGS = \
 libxfce4uiglade_la_LIBADD = \
 	$(top_builddir)/libxfce4ui/libxfce4ui-1.la \
 	$(LIBXFCE4UTIL_LIBS) \
+	$(GIO_UNIX_LIBS) \
 	$(GLADEUI_LIBS)
 
 ##

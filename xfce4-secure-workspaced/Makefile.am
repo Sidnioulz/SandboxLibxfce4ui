@@ -15,11 +15,13 @@ xfce4_secure_workspaced_SOURCES = \
 xfce4_secure_workspaced_CFLAGS = \
 	$(LIBXFCE4UTIL_CFLAGS) \
 	$(GTK2_CFLAGS) \
+	$(GIO_UNIX_CFLAGS) \
 	$(PLATFORM_CFLAGS)
 
 xfce4_secure_workspaced_LDADD = \
 	$(top_builddir)/libxfce4ui/libxfce4ui-$(LIBXFCE4UI_VERSION_API).la \
 	$(LIBXFCE4UTIL_LIBS) \
+	$(GIO_UNIX_LIBS) \
 	$(GTK2_LIBS)
 
 xfce4_secure_workspaced_DEPENDENCIES = \
