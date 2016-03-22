@@ -62,10 +62,27 @@ xfce_dialog_show_help_with_version
 xfce_dialog_show_info G_GNUC_PRINTF (3, 4)
 xfce_dialog_show_warning G_GNUC_PRINTF (3, 4)
 xfce_dialog_show_error G_GNUC_PRINTF (3, 4)
+xfce_dialog_show_error_manual G_GNUC_PRINTF (3, 4)
 xfce_dialog_confirm G_GNUC_PRINTF (5, 6)
 xfce_message_dialog_new G_GNUC_NULL_TERMINATED G_GNUC_MALLOC
 xfce_message_dialog_new_valist G_GNUC_MALLOC
 xfce_message_dialog G_GNUC_NULL_TERMINATED
+#endif
+#endif
+
+/* xfce-firejail-widget functions */
+#if IN_HEADER(__XFCE_FIREJAIL_WIDGET_H__)
+#if IN_SOURCE(__XFCE_FIREJAIL_WIDGET_C__)
+xfce_firejail_widget_get_advanced_button
+xfce_firejail_widget_get_advanced_button_visible
+xfce_firejail_widget_get_advanced_dialog
+xfce_firejail_widget_get_key_file
+xfce_firejail_widget_get_run_checkbox
+xfce_firejail_widget_get_widget
+xfce_firejail_widget_load_from_key_file
+xfce_firejail_widget_new G_GNUC_MALLOC
+xfce_firejail_widget_new_from_app_info G_GNUC_MALLOC
+xfce_firejail_widget_set_advanced_button_visible
 #endif
 #endif
 
@@ -98,8 +115,22 @@ xfce_spawn_command_line_on_screen
 /* xfce-workspace functions */
 #if IN_HEADER(__XFCE_WORKSPACE_H__)
 #if IN_SOURCE(__XFCE_WORKSPACE_C__)
+xfce_workspace_disable_sound
+xfce_workspace_enable_network
+xfce_workspace_enable_overlay
+xfce_workspace_enable_private_home
+xfce_workspace_fine_tuned_network
+xfce_workspace_get_active_workspace_number
+xfce_workspace_get_workspace_name
+xfce_workspace_get_workspace_name_escaped
 xfce_workspace_get_workspace_security_label
+xfce_workspace_has_locked_clients
+xfce_workspace_is_active_secure
+xfce_workspace_isolate_dbus
 xfce_workspace_is_secure
+xfce_workspace_let_sandboxed_out
+xfce_workspace_let_unsandboxed_in
+xfce_workspace_unsandboxed_in_behavior
 #endif
 #endif
 
