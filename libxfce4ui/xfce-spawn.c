@@ -92,23 +92,24 @@ typedef struct
 } XfceSpawnData;
 
 typedef struct {
-  GdkScreen    *screen;
-  gchar        *working_directory;
-  gchar       **argv;
-  gchar       **envp;
-  GSpawnFlags   flags;
-  gboolean      startup_notify;
-  guint32       startup_timestamp;
-  gchar        *startup_icon_name;
-  GClosure     *child_watch_closure;
-  gchar        *monitor_path;
-  gchar        *ws_name;
+  GdkScreen           *screen;
+  gchar               *working_directory;
+  gchar              **argv;
+  gchar              **envp;
+  GSpawnFlags         flags;
+  gboolean            startup_notify;
+  guint32             startup_timestamp;
+  gchar              *startup_icon_name;
+  GClosure           *child_watch_closure;
+  gchar              *monitor_path;
+  gchar              *ws_name;
 #ifdef HAVE_LIBNOTIFY
   NotifyNotification *notification;
 #endif
-  gboolean      launched;
-  gboolean      succeed;
-  GMainLoop    *loop;
+  gboolean            launched;
+  gboolean            succeed;
+  GMainLoop          *loop;
+  pthread_mutex_t     mutex;
 } XfceSpawnWatchData;
 
 #ifdef HAVE_LIBSTARTUP_NOTIFICATION
@@ -231,52 +232,54 @@ xfce_spawn_on_secure_workspace_ready (GFileMonitor     *monitor,
   GError             *error   = NULL;
 
   g_return_if_fail (data != NULL);
+  TRACE ("entering xfce_spawn_on_secure_workspace_ready");
 
   if (event_type == G_FILE_MONITOR_EVENT_CREATED || event_type == G_FILE_MONITOR_EVENT_CHANGED)
     {
-      succeed = xfce_spawn_on_screen_with_child_watch (data->screen,
-                                                       data->working_directory,
-                                                       data->argv,
-                                                       data->envp,
-                                                       data->flags,
-                                                       data->startup_notify,
-                                                       data->startup_timestamp,
-                                                       data->startup_icon_name,
-                                                       data->child_watch_closure,
-                                                       &error);
-
-      if (!succeed)
-        {
-          xfce_dialog_show_error (NULL, error, _("Failed to spawn %s in secure workspace %s"), data->argv[0], data->ws_name);
-          g_error_free (error);
-        }
-      else
-        {
-#ifdef HAVE_LIBNOTIFY
-          if (data->notification)
-            {
-              GError *notify_error = NULL;
-              gchar *text = g_strdup_printf (_("Workspace Ready. Launching %s"), data->argv[0]);
-              notify_notification_update (data->notification, text, NULL, "firejail-workspaces-ready");
-              g_free (text);
-
-              if (!notify_notification_show (data->notification, &notify_error))
-              {
-	                g_warning ("%s: failed to notify that secure workspace %s is initialized: %s\n", G_LOG_DOMAIN, data->ws_name, notify_error->message);
-	                g_error_free (notify_error);
-              }
-            }
-#endif
-        }
-
       g_signal_handlers_disconnect_by_func (monitor, xfce_spawn_on_secure_workspace_ready, data);
-      g_object_unref (monitor);
+      pthread_mutex_lock (&data->mutex);
+      if (data->launched == FALSE)
+        {
+          TRACE ("Workspace %s seems ready, attempting to spawn original target %s", data->ws_name, data->argv[0]);
+          succeed = xfce_spawn_on_screen_with_child_watch (data->screen,
+                                                           data->working_directory,
+                                                           data->argv,
+                                                           data->envp,
+                                                           data->flags,
+                                                           data->startup_notify,
+                                                           data->startup_timestamp,
+                                                           data->startup_icon_name,
+                                                           data->child_watch_closure,
+                                                           &error);
 
-      if (g_main_loop_is_running (data->loop))
-        g_main_loop_quit (data->loop);
+          if (!succeed)
+            {
+              xfce_dialog_show_error (NULL, error, _("Failed to spawn %s in secure workspace %s"), data->argv[0], data->ws_name);
+              g_error_free (error);
+            }
+          else
+            {
+    #ifdef HAVE_LIBNOTIFY
+              if (data->notification)
+                {
+                  GError *notify_error = NULL;
+                  gchar *text = g_strdup_printf (_("Workspace Ready. Launching %s"), data->argv[0]);
+                  notify_notification_update (data->notification, text, NULL, "firejail-workspaces-ready");
+                  g_free (text);
 
-      data->launched = TRUE;
-      data->succeed = succeed;
+                  if (!notify_notification_show (data->notification, &notify_error))
+                  {
+	                    g_warning ("%s: failed to notify that secure workspace %s is initialized: %s\n", G_LOG_DOMAIN, data->ws_name, notify_error->message);
+	                    g_error_free (notify_error);
+                  }
+                }
+    #endif
+            }
+
+          data->launched = TRUE;
+          data->succeed = succeed;
+        }
+      pthread_mutex_unlock (&data->mutex);
     }
 }
 
@@ -468,6 +471,7 @@ xfce_spawn_secure_workspace_daemon (GdkScreen    *screen,
 
   /* make sure a main loop exists to handle the file monitor's signals */
   data->loop                  = g_main_loop_new (NULL, FALSE);
+  pthread_mutex_init (&data->mutex, NULL);
 
   g_signal_connect (G_OBJECT (monitor), "changed", G_CALLBACK (xfce_spawn_on_secure_workspace_ready), data);
 
@@ -481,10 +485,6 @@ xfce_spawn_secure_workspace_daemon (GdkScreen    *screen,
       g_timeout_add (5000, xfce_spawn_shutdown_polling_loop, data);
       g_main_loop_run (data->loop);
 
-      /* clean-up now the loop is gone */
-      g_signal_handlers_disconnect_by_func (monitor, xfce_spawn_on_secure_workspace_ready, data);
-      g_main_loop_unref (data->loop);
-
       /* check if the intended client was launched within the given five seconds */
       succeed = (data->launched && data->succeed);
       if (!succeed)
@@ -496,6 +496,12 @@ xfce_spawn_secure_workspace_daemon (GdkScreen    *screen,
   g_strfreev (argv);
   g_free (cenvp);
   g_free (new_path);
+
+  /* clean-up now the loop is gone */
+  g_object_unref (monitor);
+
+  if (g_main_loop_is_running (data->loop))
+    g_main_loop_unref (data->loop);
 
   /* clean up the data object */
   g_unlink (data->monitor_path);
@@ -650,6 +656,14 @@ xfce_spawn_on_screen_with_child_watch (GdkScreen    *screen,
   g_return_val_if_fail ((flags & G_SPAWN_DO_NOT_REAP_CHILD) == 0, FALSE);
   g_return_val_if_fail (error == NULL || *error == NULL, FALSE);
 
+  printf ("DBG: pid %d sandbox %s argv:", getpid(), getenv("FIREJAIL_SANDBOX_NAME"));
+  {
+    gint i=0;
+    for (i=0; argv && argv[i]; i++)
+      printf ("\t\targv[%d] -> %s\n", i, argv[i]);
+    printf ("\n");
+  }
+
   if (argv[0] && (strcmp (argv[0], "firejail") == 0 ||
     strncmp (argv[0], "firejail ", 9) == 0 ||
     strcmp (argv[0], "/usr/bin/firejail") == 0 ||
@@ -697,7 +711,7 @@ xfce_spawn_on_screen_with_child_watch (GdkScreen    *screen,
                                                         child_watch_closure, sn_workspace, ws_name, cenvp, error);
           if (succeed)
             {
-              
+              TRACE ("Successfully spawned the secure workspace daemon for %s", ws_name);
             }
           else
             {
