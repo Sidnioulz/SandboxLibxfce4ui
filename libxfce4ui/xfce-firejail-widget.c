@@ -36,6 +36,7 @@
 #include <libxfce4ui/xfce-firejail-widget.h>
 #include <libxfce4ui/xfce-firejail-widget-ui.h>
 #include <libxfce4ui/libxfce4ui-private.h>
+#include <libxfce4ui/libxfce4ui-alias.h>
 
 static void         _xfce_firejail_widget_constructed          (GObject          *object);
 static void         _xfce_firejail_widget_finalize             (GObject          *object);
