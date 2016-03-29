@@ -268,10 +268,10 @@ xfce_spawn_on_secure_workspace_ready (GFileMonitor     *monitor,
                   g_free (text);
 
                   if (!notify_notification_show (data->notification, &notify_error))
-                  {
+                    {
 	                    g_warning ("%s: failed to notify that secure workspace %s is initialized: %s\n", G_LOG_DOMAIN, data->ws_name, notify_error->message);
 	                    g_error_free (notify_error);
-                  }
+                    }
                 }
     #endif
             }
@@ -331,9 +331,9 @@ xfce_spawn_secure_workspace_daemon (GdkScreen    *screen,
 
 #ifdef HAVE_LIBNOTIFY
 #if NOTIFY_CHECK_VERSION (0, 7, 0)
-  NotifyNotification *notification = notify_notification_new ("xfwm4", NULL, NULL);
+  NotifyNotification *notification = notify_notification_new ("Xfce4 UI Utilities", NULL, NULL);
 #else
-  NotifyNotification *notification = notify_notification_new ("xfwm4", NULL, NULL, NULL);
+  NotifyNotification *notification = notify_notification_new ("Xfce4 UI Utilities", NULL, NULL, NULL);
 #endif
   gchar              *body;
   GError             *notify_error = NULL;
@@ -352,12 +352,12 @@ xfce_spawn_secure_workspace_daemon (GdkScreen    *screen,
   g_free (body);
 
   if (!notify_notification_show (notification, &notify_error))
-  {
+    {
 	    g_warning ("%s: failed to notify that secure workspace %s is being initialized: %s\n", G_LOG_DOMAIN, ws_name, notify_error->message);
 	    g_error_free (notify_error);
 	    g_object_unref (notification);
 	    notification = NULL;
-  }
+    }
 #endif
 
   /* clean up path in the environment so we're confident the sandbox properly set up */
@@ -650,7 +650,10 @@ xfce_spawn_on_screen_with_child_watch (GdkScreen    *screen,
   gchar             **new_argv;
   gsize               index;
   gchar              *ws_name;
+  const gchar        *app_name = argv? argv[0]:NULL;
   gboolean            is_firejail = FALSE;
+  gboolean            sandboxing_in_ws  = FALSE;
+  gboolean            display_launch_notification  = FALSE;
 
   g_return_val_if_fail (screen == NULL || GDK_IS_SCREEN (screen), FALSE);
   g_return_val_if_fail ((flags & G_SPAWN_DO_NOT_REAP_CHILD) == 0, FALSE);
@@ -670,7 +673,18 @@ xfce_spawn_on_screen_with_child_watch (GdkScreen    *screen,
     strncmp (argv[0], "/usr/bin/firejail ", 18) == 0 ||
     strcmp (argv[0], "/usr/local/bin/firejail") == 0 ||
     strncmp (argv[0], "/usr/local/bin/firejail ", 24) == 0))
-    is_firejail = TRUE;
+    {
+      is_firejail = TRUE;
+      display_launch_notification = TRUE;
+      for (index = 0; argv && argv[index]; ++index)
+        {
+          if (g_str_has_prefix (argv[index], "--name="))
+            {
+              app_name = argv[index] + strlen ("--name=");
+              break;
+            }
+        }
+    }
 
   /* lookup the screen with the pointer */
   if (screen == NULL)
@@ -697,7 +711,8 @@ xfce_spawn_on_screen_with_child_watch (GdkScreen    *screen,
   g_free (display_name);
 
   /* secure workspace support */
-  if (!is_firejail && xfce_workspace_is_secure (sn_workspace) && !xfce_client_is_xfce (argv[0]))
+  sandboxing_in_ws = !is_firejail && xfce_workspace_is_secure (sn_workspace) && !xfce_client_is_xfce (argv[0]);
+  if (sandboxing_in_ws)
     {
       ws_name = xfce_workspace_get_workspace_name (sn_workspace);
 
@@ -735,11 +750,12 @@ xfce_spawn_on_screen_with_child_watch (GdkScreen    *screen,
 
           /* now, inject the argv parameters and set argv to point to our own pointer */
           for (n = 0; argv[n]; n++)
-              new_argv[index++] = g_strdup (argv[n]);
+            new_argv[index++] = g_strdup (argv[n]);
           new_argv[index] = NULL;
 
           argv = new_argv;
           reallocated_argv = TRUE;
+          display_launch_notification = TRUE;
         }
       
       g_free (ws_name);
@@ -750,7 +766,6 @@ xfce_spawn_on_screen_with_child_watch (GdkScreen    *screen,
   /* initialize the sn launcher context */
   if (G_LIKELY (startup_notify))
     {
-      printf("startup notify %s\n", argv[0]);
       sn_display = sn_display_new (GDK_SCREEN_XDISPLAY (screen),
                                    (SnDisplayErrorTrapPush) gdk_error_trap_push,
                                    (SnDisplayErrorTrapPop) gdk_error_trap_pop);
@@ -803,6 +818,46 @@ xfce_spawn_on_screen_with_child_watch (GdkScreen    *screen,
   /* try to spawn the new process */
   succeed = g_spawn_async (working_directory, argv, cenvp, flags, NULL,
                            NULL, &pid, error);
+
+  if (display_launch_notification)
+    {
+#ifdef HAVE_LIBNOTIFY
+      NotifyNotification *notification;
+      gchar              *body;
+      GError             *notify_error = NULL;
+
+      if (!notify_is_initted ())
+          notify_init("Xfce4 UI Utilities");
+
+      #if NOTIFY_CHECK_VERSION (0, 7, 0)
+      notification = notify_notification_new ("Xfce4 UI Utilities", NULL, NULL);
+      #else
+      notification = notify_notification_new ("Xfce4 UI Utilities", NULL, NULL, NULL);
+      #endif
+
+      if (sandboxing_in_ws)
+        {
+          ws_name = xfce_workspace_get_workspace_name (sn_workspace);
+          body = g_strdup_printf (_("Launching '%s' in '%s'"), app_name, ws_name);
+          g_free (ws_name);
+          notify_notification_update (notification, body, _("It may take a few minutes to appear in the secure workspace..."), "firejail-link");
+          g_free (body);
+        }
+      else if (is_firejail)
+        {
+          body = g_strdup_printf (_("Launching Secure App '%s'"), app_name);
+          notify_notification_update (notification, body, _("It may take a few minutes to be ready..."), "firejail-protect");
+          g_free (body);
+        }
+
+      if (!notify_notification_show (notification, &notify_error))
+        {
+          g_warning ("%s: failed to notify of sandboxed application %s being launched: %s\n", G_LOG_DOMAIN, app_name, notify_error->message);
+          g_error_free (notify_error);
+        }
+      g_object_unref (notification);
+#endif
+    }
 
   if (reallocated_argv)
     g_strfreev(argv);
