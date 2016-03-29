@@ -55,6 +55,8 @@
 #include <libnotify/notify-enum-types.h>
 #endif
 
+#include <firejail/common.h>
+
 #include <glib/gstdio.h>
 #include <libxfce4util/libxfce4util.h>
 #include <libxfce4ui/xfce-dialogs.h>
@@ -652,6 +654,7 @@ xfce_spawn_on_screen_with_child_watch (GdkScreen    *screen,
   gchar              *ws_name;
   const gchar        *app_name = argv? argv[0]:NULL;
   gboolean            is_firejail = FALSE;
+  gboolean            is_joining_firejail = FALSE;
   gboolean            sandboxing_in_ws  = FALSE;
   gboolean            display_launch_notification  = FALSE;
 
@@ -659,13 +662,7 @@ xfce_spawn_on_screen_with_child_watch (GdkScreen    *screen,
   g_return_val_if_fail ((flags & G_SPAWN_DO_NOT_REAP_CHILD) == 0, FALSE);
   g_return_val_if_fail (error == NULL || *error == NULL, FALSE);
 
-  printf ("DBG: pid %d sandbox %s argv:", getpid(), getenv("FIREJAIL_SANDBOX_NAME"));
-  {
-    gint i=0;
-    for (i=0; argv && argv[i]; i++)
-      printf ("\t\targv[%d] -> %s\n", i, argv[i]);
-    printf ("\n");
-  }
+  for (argc = 0; argv[argc]; argc++);
 
   if (argv[0] && (strcmp (argv[0], "firejail") == 0 ||
     strncmp (argv[0], "firejail ", 9) == 0 ||
@@ -674,8 +671,13 @@ xfce_spawn_on_screen_with_child_watch (GdkScreen    *screen,
     strcmp (argv[0], "/usr/local/bin/firejail") == 0 ||
     strncmp (argv[0], "/usr/local/bin/firejail ", 24) == 0))
     {
+      pid_t result;
+
+      /* mark that we're running a Firejail instance */
       is_firejail = TRUE;
       display_launch_notification = TRUE;
+
+      /* find the sandbox name */
       for (index = 0; argv && argv[index]; ++index)
         {
           if (g_str_has_prefix (argv[index], "--name="))
@@ -684,14 +686,38 @@ xfce_spawn_on_screen_with_child_watch (GdkScreen    *screen,
               break;
             }
         }
+
+      /* find out if we are joining an existing box */
+      is_joining_firejail = name2pid (app_name, &result) == 0;
+      if (is_joining_firejail)
+        {
+          gsize original_index;
+
+          TRACE ("Joining the existing Firejail domain '%s'", app_name);
+
+          for (original_index = 1; argv && argv[original_index] && argv[original_index][0] == '-'; ++original_index);
+
+          /* new argv, starting with Firejail's locked workspace mode */
+          new_argv = g_malloc(sizeof (gchar *) * (argc + 100));
+          index = 0;
+
+          new_argv[index++] = g_strdup ("firejail");
+          new_argv[index++] = g_strdup_printf ("--join=%s", app_name);
+
+          /* now, inject the argv parameters and set argv to point to our own pointer */
+          for (n = original_index; argv && argv[n]; n++)
+            new_argv[index++] = g_strdup (argv[n]);
+          new_argv[index] = NULL;
+
+          argv = new_argv;
+          reallocated_argv = TRUE;
+        }
     }
 
   /* lookup the screen with the pointer */
   if (screen == NULL)
     screen = xfce_gdk_screen_get_active (NULL);
   sn_workspace = xfce_workspace_get_active_workspace_number (screen);
-
-  for (argc = 0; argv[argc]; argc++);
 
   /* setup the child environment (stripping $DESKTOP_STARTUP_ID and $DISPLAY) */
   if (G_LIKELY (envp == NULL))
