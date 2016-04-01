@@ -104,7 +104,7 @@ typedef struct {
   gchar              *startup_icon_name;
   GClosure           *child_watch_closure;
   gchar              *monitor_path;
-  gchar              *ws_name;
+  gchar              *domain_name;
 #ifdef HAVE_LIBNOTIFY
   NotifyNotification *notification;
 #endif
@@ -220,6 +220,75 @@ xfce_spawn_startup_watch_destroy (gpointer user_data)
 
 
 
+static void
+xfce_spawn_on_secure_app_ready (GFileMonitor     *monitor,
+                                GFile            *file,
+                                GFile            *other_file,
+                                GFileMonitorEvent event_type,
+                                gpointer          user_data)
+{
+  XfceSpawnWatchData *data    = (XfceSpawnWatchData *) user_data;
+  gboolean            succeed = FALSE;
+  GError             *error   = NULL;
+
+  g_return_if_fail (data != NULL);
+  printf ("DBG: entering xfce_spawn_on_secure_app_ready\n");
+  TRACE ("entering xfce_spawn_on_secure_app_ready");
+
+  if (event_type == G_FILE_MONITOR_EVENT_CREATED || event_type == G_FILE_MONITOR_EVENT_CHANGED)
+    {
+      g_signal_handlers_disconnect_by_func (monitor, xfce_spawn_on_secure_app_ready, data);
+      pthread_mutex_lock (&data->mutex);
+      if (data->launched == FALSE)
+        {
+          gsize n;
+          TRACE ("Sandbox domain daemon %s seems ready, attempting to spawn original target %s", data->domain_name, data->argv[0]);
+          printf ("DBG: Sandbox domain daemon %s seems ready, attempting to spawn original target %s\n", data->domain_name, data->argv[0]);
+          for (n=0; data->argv[n]; n++)
+            printf("DBG:\t%s\n", data->argv[n]);
+          succeed = xfce_spawn_on_screen_with_child_watch (data->screen,
+                                                           data->working_directory,
+                                                           data->argv,
+                                                           data->envp,
+                                                           data->flags,
+                                                           data->startup_notify,
+                                                           data->startup_timestamp,
+                                                           data->startup_icon_name,
+                                                           data->child_watch_closure,
+                                                           &error);
+
+          if (!succeed)
+            {
+              xfce_dialog_show_error (NULL, error, _("Failed to spawn %s in sandbox domain %s"), data->argv[0], data->domain_name);
+              g_error_free (error);
+            }
+          else
+            {
+    #ifdef HAVE_LIBNOTIFY
+              if (data->notification)
+                {
+                  GError *notify_error = NULL;
+                  gchar *text = g_strdup_printf (_("Sandbox '%s' Ready. Launching %s"), data->domain_name, data->argv[2]); // firejail --join=foo APP [OPTIONS]
+                  printf ("DBG: notification -i firejail-ready '%s'\n", text);
+                  notify_notification_update (data->notification, text, NULL, "firejail-ready");
+                  g_free (text);
+
+                  if (!notify_notification_show (data->notification, &notify_error))
+                    {
+	                    g_warning ("%s: failed to notify that sandbox domain %s is initialized: %s\n", G_LOG_DOMAIN, data->domain_name, notify_error->message);
+	                    g_error_free (notify_error);
+                    }
+                }
+    #endif
+            }
+
+          data->launched = TRUE;
+          data->succeed = succeed;
+        }
+      pthread_mutex_unlock (&data->mutex);
+    }
+}
+
 
 
 static void
@@ -242,7 +311,7 @@ xfce_spawn_on_secure_workspace_ready (GFileMonitor     *monitor,
       pthread_mutex_lock (&data->mutex);
       if (data->launched == FALSE)
         {
-          TRACE ("Workspace %s seems ready, attempting to spawn original target %s", data->ws_name, data->argv[0]);
+          TRACE ("Workspace %s seems ready, attempting to spawn original target %s", data->domain_name, data->argv[0]);
           succeed = xfce_spawn_on_screen_with_child_watch (data->screen,
                                                            data->working_directory,
                                                            data->argv,
@@ -256,7 +325,7 @@ xfce_spawn_on_secure_workspace_ready (GFileMonitor     *monitor,
 
           if (!succeed)
             {
-              xfce_dialog_show_error (NULL, error, _("Failed to spawn %s in secure workspace %s"), data->argv[0], data->ws_name);
+              xfce_dialog_show_error (NULL, error, _("Failed to spawn %s in secure workspace %s"), data->argv[0], data->domain_name);
               g_error_free (error);
             }
           else
@@ -271,7 +340,7 @@ xfce_spawn_on_secure_workspace_ready (GFileMonitor     *monitor,
 
                   if (!notify_notification_show (data->notification, &notify_error))
                     {
-	                    g_warning ("%s: failed to notify that secure workspace %s is initialized: %s\n", G_LOG_DOMAIN, data->ws_name, notify_error->message);
+	                    g_warning ("%s: failed to notify that secure workspace %s is initialized: %s\n", G_LOG_DOMAIN, data->domain_name, notify_error->message);
 	                    g_error_free (notify_error);
                     }
                 }
@@ -414,7 +483,8 @@ xfce_spawn_secure_workspace_daemon (GdkScreen    *screen,
     }
 
   /* finally, adding the name of the daemon */
-  argv[index++] = g_strdup ("xfce4-secure-workspaced");
+  argv[index++] = g_strdup ("xfce4-sandboxd");
+  argv[index++] = g_strdup (ws_name);
 
   /* and the path to the file where it must report on its status */
   if (overlaying)
@@ -466,7 +536,7 @@ xfce_spawn_secure_workspace_daemon (GdkScreen    *screen,
   data->startup_icon_name     = g_strdup (startup_icon_name);
   data->child_watch_closure   = child_watch_closure;
   data->monitor_path          = monitor_path;
-  data->ws_name               = g_strdup (ws_name);
+  data->domain_name           = g_strdup (ws_name);
 #ifdef HAVE_LIBNOTIFY
   data->notification          = notification;
 #endif
@@ -508,7 +578,7 @@ xfce_spawn_secure_workspace_daemon (GdkScreen    *screen,
   /* clean up the data object */
   g_unlink (data->monitor_path);
 
-  g_free (data->ws_name);
+  g_free (data->domain_name);
   g_free (data->working_directory);
   g_free (data->startup_icon_name);
   g_free (data->monitor_path);
@@ -521,6 +591,234 @@ xfce_spawn_secure_workspace_daemon (GdkScreen    *screen,
 #endif
   g_slice_free (XfceSpawnWatchData, data);
 
+  return succeed;
+}
+
+
+
+static gboolean
+xfce_spawn_secure_app_daemon (GdkScreen    *screen,
+                              const gchar  *working_directory,
+                              gchar       **spawn_argv,
+                              gchar       **spawn_envp,
+                              GSpawnFlags   spawn_flags,
+                              gboolean      startup_notify,
+                              guint32       startup_timestamp,
+                              const gchar  *startup_icon_name,
+                              GClosure     *child_watch_closure,
+                              gsize         original_index,
+                              const gchar  *firejail_domain_name,
+                              gchar       **envp,
+                              GError      **error)
+{
+  gboolean            succeed = FALSE;
+  gchar             **argv;
+  gchar             **new_spawn_argv;
+  GPid                pid;
+  gchar             **cenvp;
+  guint               n;
+  guint               n_cenvp;
+  gchar              *new_path;
+  gsize               index;
+  gsize               argc;
+  gboolean            overlaying = FALSE;
+  GFileMonitor       *monitor;
+  gchar              *monitor_path;
+  XfceSpawnWatchData *data;
+  GFile              *file;
+
+#ifdef HAVE_LIBNOTIFY
+#if NOTIFY_CHECK_VERSION (0, 7, 0)
+  NotifyNotification *notification = notify_notification_new ("Xfce4 UI Utilities", NULL, NULL);
+#else
+  NotifyNotification *notification = notify_notification_new ("Xfce4 UI Utilities", NULL, NULL, NULL);
+#endif
+  gchar              *body;
+  GError             *notify_error = NULL;
+#endif
+
+  g_return_val_if_fail (error == NULL || *error == NULL, FALSE);
+
+  TRACE ("Spawning Xfce's sandbox domain daemon for '%s', which will keep the Firejail domain alive", firejail_domain_name);
+
+#ifdef HAVE_LIBNOTIFY
+  if (!notify_is_initted ())
+      notify_init("Xfce4 UI Utilities");
+
+  body = g_strdup_printf (_("Initializing Sandbox '%s'"), firejail_domain_name);
+  notify_notification_update (notification, body, NULL, "firejail-protect");
+  g_free (body);
+
+  if (!notify_notification_show (notification, &notify_error))
+    {
+	    g_warning ("%s: failed to notify that sandbox domain %s is being initialized: %s\n", G_LOG_DOMAIN, firejail_domain_name, notify_error->message);
+	    g_error_free (notify_error);
+	    g_object_unref (notification);
+	    notification = NULL;
+    }
+#endif
+
+  /* clean up path in the environment so we're confident the sandbox properly set up */
+  if (G_LIKELY (envp == NULL))
+    envp = (gchar **) environ;
+  for (n = 0; envp[n] != NULL; ++n);
+  cenvp = g_new0 (gchar *, n + 2);
+  for (n_cenvp = n = 0; envp[n] != NULL; ++n)
+    {
+      if (strncmp (envp[n], "DESKTOP_STARTUP_ID", 18) != 0
+          && strncmp (envp[n], "PATH", 4) != 0)
+        cenvp[n_cenvp++] = envp[n];
+    }
+
+  /* add a safe path */
+  cenvp[n_cenvp++] = new_path = g_strdup ("PATH=/usr/local/sbin:/usr/local/bin:/usr/bin:/usr/sbin:/sbin");
+
+  for (argc = 0; spawn_argv && spawn_argv[argc]; argc++);
+
+  /* new argv, starting with all the Firejail options passed to the client we're launching */
+  argv = g_malloc0(sizeof (gchar *) * (original_index+4));
+  for (index = 0; index < original_index; ++index)
+    {
+      argv[index] = g_strdup (spawn_argv[index]);
+      if (g_str_has_prefix (spawn_argv[index], "--overlay"))
+        overlaying = TRUE;
+    }
+
+  /* finally, adding the name of the daemon */
+  argv[index++] = g_strdup ("xfce4-sandboxd");
+  argv[index++] = g_strdup (firejail_domain_name);
+
+  /* and the path to the file where it must report on its status */
+  if (overlaying)
+    {
+      monitor_path = g_strdup_printf ("%s/Sandboxes/%s/Users/%s/.cache/xfce4/secure-app.notify",
+                                      g_get_home_dir (),
+                                      firejail_domain_name,
+                                      g_get_user_name ());
+      argv[index++] = g_strdup_printf ("/home/%s/.cache/xfce4/secure-app.notify",
+                                       g_get_user_name ());
+    }
+  else
+    {
+      monitor_path = g_strdup_printf ("%s/xfce4/secure-app-%s.notify",
+                                      g_get_user_cache_dir (),
+                                      firejail_domain_name);
+      argv[index++] = monitor_path;
+    }
+  argv[index] = NULL;
+  printf ("\n\n\n\nDBG: DAEMON %lu POINTERS\n\n", index);
+  for (n = 0; argv[n]; ++n)
+    printf ("+ %u: %s\n", n, argv[n]);
+
+  /* create the new argv to spawn the original app in the sandbox */
+  new_spawn_argv = g_malloc0(sizeof (gchar *) * (argc-original_index+3));
+  printf ("\n\n\n\nDBG: NEW SPAWN %lu POINTERS\n\n", argc-original_index+3);
+  index = 0;
+
+  new_spawn_argv[index++] = g_strdup ("firejail");
+  new_spawn_argv[index++] = g_strdup_printf ("--join=%s", firejail_domain_name);
+  for (n = original_index; spawn_argv[n]; ++n)
+    new_spawn_argv[index++] = g_strdup (spawn_argv[n]);
+  for (n = 0; new_spawn_argv[n]; ++n)
+    printf ("+ %u: %s\n", n, new_spawn_argv[n]);
+  new_spawn_argv[index] = NULL;
+
+  /* assuming that this would fail only because the file doesn't exist; if it
+   * fails for other reasons, we can't recover anyway */
+  g_unlink (monitor_path);
+
+  /* start monitoring changes to the file */
+  file = g_file_new_for_path (monitor_path);
+  if (!file)
+    {
+      g_set_error (error, G_SPAWN_ERROR, G_SPAWN_ERROR_FAILED,
+                   _("Failed to setup a monitor for the file path where we await a notification from the sandbox domain daemon"));
+      return FALSE;
+    }
+
+  monitor = g_file_monitor_file (file, G_FILE_MONITOR_NONE, NULL, error);
+  if (error && *error)
+    {
+      return FALSE;
+    }
+
+  data = g_slice_new0 (XfceSpawnWatchData);
+
+  data->screen                = g_object_ref (screen);
+  data->working_directory     = g_strdup (working_directory);
+  data->argv                  = new_spawn_argv;
+  data->envp                  = g_strdupv (spawn_envp);
+  data->flags                 = spawn_flags;
+  data->startup_notify        = startup_notify;
+  data->startup_timestamp     = startup_timestamp;
+  data->startup_icon_name     = g_strdup (startup_icon_name);
+  data->child_watch_closure   = child_watch_closure;
+  data->monitor_path          = monitor_path;
+  data->domain_name           = g_strdup (firejail_domain_name);
+#ifdef HAVE_LIBNOTIFY
+  data->notification          = notification;
+#endif
+
+  /* make sure a main loop exists to handle the file monitor's signals */
+  data->loop                  = g_main_loop_new (NULL, FALSE);
+  pthread_mutex_init (&data->mutex, NULL);
+
+  g_signal_connect (G_OBJECT (monitor), "changed", G_CALLBACK (xfce_spawn_on_secure_app_ready), data);
+
+  printf ("DBG: 1\n");
+  /* try to spawn the new process */
+  succeed = g_spawn_async (NULL, argv, cenvp, G_SPAWN_SEARCH_PATH_FROM_ENVP, NULL,
+                           NULL, &pid, error);
+  printf ("DBG: 2 (%d)\n", succeed);
+
+  if (G_LIKELY (succeed))
+    {
+  printf ("DBG: 3\n");
+      /* run the loop for up to five seconds */
+      g_timeout_add (5000, xfce_spawn_shutdown_polling_loop, data);
+  printf ("DBG: 4\n");
+        g_main_loop_run (data->loop);
+  printf ("DBG: 5\n");
+
+      /* check if the intended client was launched within the given five seconds */
+      succeed = (data->launched && data->succeed);
+  printf ("DBG: 6 (%d)\n", succeed);
+      if (!succeed)
+        g_set_error (error, G_SPAWN_ERROR, G_SPAWN_ERROR_FAILED,
+                     _("Failed to receive notification from the sandbox domain daemon that the sandbox is initialized"));
+    }
+
+  printf ("DBG: 7\n");
+  /* clean up local memory */    
+  g_strfreev (argv);
+  g_free (cenvp);
+  g_free (new_path);
+
+  /* clean-up now the loop is gone */
+  g_object_unref (monitor);
+  printf ("DBG: 8\n");
+
+  if (g_main_loop_is_running (data->loop))
+    g_main_loop_unref (data->loop);
+  printf ("DBG: 9\n");
+
+  /* clean up the data object */
+  g_unlink (data->monitor_path);
+
+  g_free (data->domain_name);
+  g_free (data->working_directory);
+  g_free (data->startup_icon_name);
+  g_free (data->monitor_path);
+  g_strfreev (data->argv);
+  g_strfreev (data->envp);
+  g_object_unref (data->screen);
+#ifdef HAVE_LIBNOTIFY
+  if (data->notification)
+    g_object_unref (data->notification);
+#endif
+  g_slice_free (XfceSpawnWatchData, data);
+
+  printf ("DBG: 10 (%d)\n", succeed);
   return succeed;
 }
 
@@ -653,64 +951,42 @@ xfce_spawn_on_screen_with_child_watch (GdkScreen    *screen,
   gsize               index;
   gchar              *ws_name;
   const gchar        *app_name = argv? argv[0]:NULL;
+  const gchar        *firejail_domain_name = NULL;
   gboolean            is_firejail = FALSE;
   gboolean            is_joining_firejail = FALSE;
   gboolean            sandboxing_in_ws  = FALSE;
   gboolean            display_launch_notification  = FALSE;
+  gsize               original_index = 0;
 
   g_return_val_if_fail (screen == NULL || GDK_IS_SCREEN (screen), FALSE);
   g_return_val_if_fail ((flags & G_SPAWN_DO_NOT_REAP_CHILD) == 0, FALSE);
   g_return_val_if_fail (error == NULL || *error == NULL, FALSE);
 
-  for (argc = 0; argv[argc]; argc++);
+  for (argc = 0; argv && argv[argc]; argc++);
 
-  if (argv[0] && (strcmp (argv[0], "firejail") == 0 ||
+  if (argv && argv[0] && (strcmp (argv[0], "firejail") == 0 ||
     strncmp (argv[0], "firejail ", 9) == 0 ||
     strcmp (argv[0], "/usr/bin/firejail") == 0 ||
     strncmp (argv[0], "/usr/bin/firejail ", 18) == 0 ||
     strcmp (argv[0], "/usr/local/bin/firejail") == 0 ||
     strncmp (argv[0], "/usr/local/bin/firejail ", 24) == 0))
     {
-      pid_t result;
-
       /* mark that we're running a Firejail instance */
       is_firejail = TRUE;
       display_launch_notification = TRUE;
+
+      /* find the likely index in argv of the original app being sandboxed */
+      for (original_index = 1; argv && argv[original_index] && argv[original_index][0] == '-'; ++original_index);
+      app_name = argv[original_index];
 
       /* find the sandbox name */
       for (index = 0; argv && argv[index]; ++index)
         {
           if (g_str_has_prefix (argv[index], "--name="))
             {
-              app_name = argv[index] + strlen ("--name=");
+              firejail_domain_name = argv[index] + strlen ("--name=");
               break;
             }
-        }
-
-      /* find out if we are joining an existing box */
-      is_joining_firejail = name2pid (app_name, &result) == 0;
-      if (is_joining_firejail)
-        {
-          gsize original_index;
-
-          TRACE ("Joining the existing Firejail domain '%s'", app_name);
-
-          for (original_index = 1; argv && argv[original_index] && argv[original_index][0] == '-'; ++original_index);
-
-          /* new argv, starting with Firejail's locked workspace mode */
-          new_argv = g_malloc(sizeof (gchar *) * (argc + 100));
-          index = 0;
-
-          new_argv[index++] = g_strdup ("firejail");
-          new_argv[index++] = g_strdup_printf ("--join=%s", app_name);
-
-          /* now, inject the argv parameters and set argv to point to our own pointer */
-          for (n = original_index; argv && argv[n]; n++)
-            new_argv[index++] = g_strdup (argv[n]);
-          new_argv[index] = NULL;
-
-          argv = new_argv;
-          reallocated_argv = TRUE;
         }
     }
 
@@ -735,6 +1011,51 @@ xfce_spawn_on_screen_with_child_watch (GdkScreen    *screen,
   display_name = gdk_screen_make_display_name (screen);
   cenvp[n_cenvp++] = new_display = g_strconcat ("DISPLAY=", display_name, NULL);
   g_free (display_name);
+
+  /* named sandbox support */
+  if (is_firejail && firejail_domain_name)
+    {
+      pid_t result;
+
+      /* find out if we are joining an existing box */
+      is_joining_firejail = name2pid (firejail_domain_name, &result) == 0;
+      if (is_joining_firejail)
+        {
+          TRACE ("Joining the existing Firejail domain '%s'", firejail_domain_name);
+
+          /* new argv, starting with Firejail's locked workspace mode */
+          new_argv = g_malloc(sizeof (gchar *) * (argc + 100));
+          index = 0;
+
+          new_argv[index++] = g_strdup ("firejail");
+          new_argv[index++] = g_strdup_printf ("--join=%s", firejail_domain_name);
+
+          /* now, inject the argv parameters and set argv to point to our own pointer */
+          for (n = original_index; argv && argv[n]; n++)
+            new_argv[index++] = g_strdup (argv[n]);
+          new_argv[index] = NULL;
+
+          argv = new_argv;
+          reallocated_argv = TRUE;
+        }
+      else
+        {
+          succeed = xfce_spawn_secure_app_daemon (screen, working_directory, argv, envp, flags,
+                                                  startup_notify, startup_timestamp, startup_icon_name,
+                                                  child_watch_closure, original_index, firejail_domain_name, cenvp, error);
+          if (succeed)
+            {
+              TRACE ("Successfully spawned the sandbox domain daemon for %s", firejail_domain_name);
+            }
+          else
+            {
+              xfce_dialog_show_error (NULL, *error, _("Failed to spawn the sandbox domain daemon for %s"), firejail_domain_name);
+              TRACE ("Failed to spawn the sandbox domain daemon for %s", firejail_domain_name);
+            }
+
+          return succeed;
+        }
+    }
 
   /* secure workspace support */
   sandboxing_in_ws = !is_firejail && xfce_workspace_is_secure (sn_workspace) && !xfce_client_is_xfce (argv[0]);

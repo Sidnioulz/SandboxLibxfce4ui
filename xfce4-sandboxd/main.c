@@ -61,8 +61,8 @@ notify_spawner (gpointer user_data)
   if (!path)
     {
       xfce_dialog_show_error_manual (NULL,
-                                     _("The Xfce secure workspace daemon failed to notify Xfce it is running properly (error 1)."),
-                                     _("Failed to initialize secure workspace"));
+                                     _("The Xfce sandbox domain daemon failed to notify Xfce it is running properly (error 1)."),
+                                     _("Failed to initialize sandbox domain"));
      
       return FALSE;
     }
@@ -73,8 +73,8 @@ notify_spawner (gpointer user_data)
       *last_dir = '\0';
       if (g_mkdir_with_parents (path, 0755) == -1)
         {
-          gchar *txt = g_strdup_printf (_("The Xfce secure workspace daemon failed to notify Xfce it is running properly (error %d: %s)."), 2, strerror(errno));
-          xfce_dialog_show_error_manual (NULL, txt, _("Failed to initialize secure workspace"));
+          gchar *txt = g_strdup_printf (_("The Xfce sandbox domain daemon failed to notify Xfce it is running properly (error %d: %s)."), 2, strerror(errno));
+          xfce_dialog_show_error_manual (NULL, txt, _("Failed to initialize sandbox domain"));
           g_free (txt);
           return FALSE;
         }
@@ -84,16 +84,16 @@ notify_spawner (gpointer user_data)
 	stream = fopen (path, "w");
   if (!stream)
     {
-      gchar *txt = g_strdup_printf (_("The Xfce secure workspace daemon failed to notify Xfce it is running properly (error %d: %s)."), 3, strerror(errno));
-      xfce_dialog_show_error_manual (NULL, txt, _("Failed to initialize secure workspace"));
+      gchar *txt = g_strdup_printf (_("The Xfce sandbox domain daemon failed to notify Xfce it is running properly (error %d: %s)."), 3, strerror(errno));
+      xfce_dialog_show_error_manual (NULL, txt, _("Failed to initialize sandbox domain"));
       g_free (txt);
       return FALSE;
     }
 
 	if (fprintf(stream, "%u\n", getpid()) == -1)
 	  {
-      gchar *txt = g_strdup_printf (_("The Xfce secure workspace daemon failed to notify Xfce it is running properly (error %d: %s)."), 4, strerror(errno));
-      xfce_dialog_show_error_manual (NULL, txt, _("Failed to initialize secure workspace"));
+      gchar *txt = g_strdup_printf (_("The Xfce sandbox domain daemon failed to notify Xfce it is running properly (error %d: %s)."), 4, strerror(errno));
+      xfce_dialog_show_error_manual (NULL, txt, _("Failed to initialize sandbox domain"));
       g_free (txt);
       return FALSE;
 	  }
@@ -117,12 +117,12 @@ main (gint    argc,
     {
       if (G_LIKELY (error != NULL))
         {
-          g_print ("%s: Failed to initialize Xfce Secure Workspace: %s.\n", G_LOG_DOMAIN, error->message);
+          g_print ("%s: Failed to initialize Xfce sandbox domain: %s.\n", G_LOG_DOMAIN, error->message);
           g_print ("\n");
           g_error_free (error);
         }
       else
-        g_error (_("Failed to initialize Xfce Secure Workspace."));
+        g_error (_("Failed to initialize Xfce sandbox domain."));
 
       return EXIT_FAILURE;
     }
@@ -138,10 +138,10 @@ main (gint    argc,
       return EXIT_SUCCESS;
     }
 
-  if (argc < 2)
+  if (argc < 3)
     {
-      xfce_dialog_show_error_manual (NULL, _("The Xfce secure workspace daemon was invoked improperly."), _("Failed to initialize secure workspace"));
-      g_error (_("%s %s (Xfce %s)\n\nUsage: %s \"PATH TO NOTIFY FILE\"\n"), G_LOG_DOMAIN, PACKAGE_VERSION, xfce_version_string (), G_LOG_DOMAIN);
+      xfce_dialog_show_error_manual (NULL, _("The Xfce sandbox domain daemon was invoked improperly."), _("Failed to initialize sandbox domain"));
+      g_error (_("%s %s (Xfce %s)\n\nUsage: %s \"NAME OF SANDBOX\" \"PATH TO NOTIFY FILE FROM WITHIN SANDBOX\"\n"), G_LOG_DOMAIN, PACKAGE_VERSION, xfce_version_string (), G_LOG_DOMAIN);
       return EXIT_FAILURE;
     }
 
@@ -158,7 +158,7 @@ main (gint    argc,
     }
 
   // create an idle function that will be called once the loop runs
-  g_idle_add_full (G_PRIORITY_HIGH, notify_spawner, argv[1], NULL);
+  g_idle_add_full (G_PRIORITY_HIGH, notify_spawner, argv[2], NULL);
 
   // run the loop, we're now a happy 'daemon'!
   g_main_loop_run (loop);

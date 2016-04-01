@@ -339,7 +339,7 @@ libxfce4ui/libxfce4ui-2.pc
 libxfce4ui/libxfce4ui-config.h
 libxfce4ui/Makefile
 xfce4-about/Makefile
-xfce4-secure-workspaced/Makefile
+xfce4-sandboxd/Makefile
 po/Makefile.in
 ])
 

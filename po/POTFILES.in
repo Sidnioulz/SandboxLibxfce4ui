@@ -38,4 +38,4 @@ xfce4-about/xfce4-about-dialog.glade
 #
 # Xfce4 secure workspace daemon
 #
-xfce4-secure-workspaced/main.c
+xfce4-sandboxd/main.c
