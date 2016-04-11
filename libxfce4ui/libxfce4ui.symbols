@@ -123,6 +123,7 @@ xfce_workspace_fine_tuned_network
 xfce_workspace_get_active_workspace_number
 xfce_workspace_get_workspace_name
 xfce_workspace_get_workspace_name_escaped
+xfce_workspace_get_workspace_id_from_name
 xfce_workspace_get_workspace_security_label
 xfce_workspace_has_locked_clients
 xfce_workspace_is_active_secure
@@ -131,6 +132,8 @@ xfce_workspace_is_secure
 xfce_workspace_let_sandboxed_out
 xfce_workspace_let_unsandboxed_in
 xfce_workspace_unsandboxed_in_behavior
+xfce_workspace_download_speed
+xfce_workspace_upload_speed
 #endif
 #endif
 

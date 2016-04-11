@@ -284,6 +284,41 @@ xfce_workspace_unsandboxed_in_behavior (gint ws)
 }
 
 
+
+gint
+xfce_workspace_download_speed (gint ws)
+{
+  XfconfChannel *channel;
+  gchar         *prop;
+  gint           speed;
+
+  channel = xfce_workspace_xfconf_init ();
+  prop = g_strdup_printf ("/security/workspace_%d/download_speed", ws);
+  speed = xfconf_channel_get_int (channel, prop, 1000000);
+  g_free (prop);
+
+  return speed;
+}
+
+
+
+gboolean
+xfce_workspace_upload_speed (gint ws)
+{
+  XfconfChannel *channel;
+  gchar         *prop;
+  gint           speed;
+
+  channel = xfce_workspace_xfconf_init ();
+  prop = g_strdup_printf ("/security/workspace_%d/upload_speed", ws);
+  speed = xfconf_channel_get_int (channel, prop, 1000000);
+  g_free (prop);
+
+  return speed;
+}
+
+
+
 static gchar *
 xfce_workspace_name_escape (const gchar *source)
 {
@@ -398,6 +433,33 @@ gchar *
 xfce_workspace_get_workspace_name (gint ws)
 {
   return _xfce_workspace_get_workspace_name_escaped(ws, g_strdup);
+}
+
+
+
+gint
+xfce_workspace_get_workspace_id_from_name (const gchar *name)
+{
+  XfconfChannel *channel;
+  gint           n;
+  gint           ws_count;
+  gchar         *ws_name;
+
+  channel = xfce_workspace_xfconf_init ();
+  ws_count = xfconf_channel_get_int (channel, "/general/workspace_count", 1);
+
+  for (n = 0; n < ws_count; n++)
+    {
+      ws_name = xfce_workspace_get_workspace_name (n);
+      if (g_strcmp0 (ws_name, name) == 0)
+        {
+          g_free (ws_name);
+          return n;
+        }
+      g_free (ws_name);
+    }
+
+  return -1;
 }
 
 
