@@ -232,7 +232,6 @@ xfce_spawn_on_secure_app_ready (GFileMonitor     *monitor,
   GError             *error   = NULL;
 
   g_return_if_fail (data != NULL);
-  printf ("DBG: entering xfce_spawn_on_secure_app_ready\n");
   TRACE ("entering xfce_spawn_on_secure_app_ready");
 
   if (event_type == G_FILE_MONITOR_EVENT_CREATED || event_type == G_FILE_MONITOR_EVENT_CHANGED)
@@ -241,11 +240,7 @@ xfce_spawn_on_secure_app_ready (GFileMonitor     *monitor,
       pthread_mutex_lock (&data->mutex);
       if (data->launched == FALSE)
         {
-          gsize n;
           TRACE ("Sandbox domain daemon %s seems ready, attempting to spawn original target %s", data->domain_name, data->argv[0]);
-          printf ("DBG: Sandbox domain daemon %s seems ready, attempting to spawn original target %s\n", data->domain_name, data->argv[0]);
-          for (n=0; data->argv[n]; n++)
-            printf("DBG:\t%s\n", data->argv[n]);
           succeed = xfce_spawn_on_screen_with_child_watch (data->screen,
                                                            data->working_directory,
                                                            data->argv,
@@ -269,7 +264,6 @@ xfce_spawn_on_secure_app_ready (GFileMonitor     *monitor,
                 {
                   GError *notify_error = NULL;
                   gchar *text = g_strdup_printf (_("Sandbox '%s' Ready. Launching %s"), data->domain_name, data->argv[2]); // firejail --join=foo APP [OPTIONS]
-                  printf ("DBG: notification -i firejail-ready '%s'\n", text);
                   notify_notification_update (data->notification, text, NULL, "firejail-ready");
                   g_free (text);
 
@@ -706,21 +700,15 @@ xfce_spawn_secure_app_daemon (GdkScreen    *screen,
       argv[index++] = monitor_path;
     }
   argv[index] = NULL;
-  printf ("\n\n\n\nDBG: DAEMON %lu POINTERS\n\n", index);
-  for (n = 0; argv[n]; ++n)
-    printf ("+ %u: %s\n", n, argv[n]);
 
   /* create the new argv to spawn the original app in the sandbox */
   new_spawn_argv = g_malloc0(sizeof (gchar *) * (argc-original_index+3));
-  printf ("\n\n\n\nDBG: NEW SPAWN %lu POINTERS\n\n", argc-original_index+3);
   index = 0;
 
   new_spawn_argv[index++] = g_strdup ("firejail");
   new_spawn_argv[index++] = g_strdup_printf ("--join=%s", firejail_domain_name);
   for (n = original_index; spawn_argv[n]; ++n)
     new_spawn_argv[index++] = g_strdup (spawn_argv[n]);
-  for (n = 0; new_spawn_argv[n]; ++n)
-    printf ("+ %u: %s\n", n, new_spawn_argv[n]);
   new_spawn_argv[index] = NULL;
 
   /* assuming that this would fail only because the file doesn't exist; if it
@@ -765,30 +753,23 @@ xfce_spawn_secure_app_daemon (GdkScreen    *screen,
 
   g_signal_connect (G_OBJECT (monitor), "changed", G_CALLBACK (xfce_spawn_on_secure_app_ready), data);
 
-  printf ("DBG: 1\n");
   /* try to spawn the new process */
   succeed = g_spawn_async (NULL, argv, cenvp, G_SPAWN_SEARCH_PATH_FROM_ENVP, NULL,
                            NULL, &pid, error);
-  printf ("DBG: 2 (%d)\n", succeed);
 
   if (G_LIKELY (succeed))
     {
-  printf ("DBG: 3\n");
       /* run the loop for up to five seconds */
       g_timeout_add (5000, xfce_spawn_shutdown_polling_loop, data);
-  printf ("DBG: 4\n");
         g_main_loop_run (data->loop);
-  printf ("DBG: 5\n");
 
       /* check if the intended client was launched within the given five seconds */
       succeed = (data->launched && data->succeed);
-  printf ("DBG: 6 (%d)\n", succeed);
       if (!succeed)
         g_set_error (error, G_SPAWN_ERROR, G_SPAWN_ERROR_FAILED,
                      _("Failed to receive notification from the sandbox domain daemon that the sandbox is initialized"));
     }
 
-  printf ("DBG: 7\n");
   /* clean up local memory */    
   g_strfreev (argv);
   g_free (cenvp);
@@ -796,11 +777,9 @@ xfce_spawn_secure_app_daemon (GdkScreen    *screen,
 
   /* clean-up now the loop is gone */
   g_object_unref (monitor);
-  printf ("DBG: 8\n");
 
   if (g_main_loop_is_running (data->loop))
     g_main_loop_unref (data->loop);
-  printf ("DBG: 9\n");
 
   /* clean up the data object */
   g_unlink (data->monitor_path);
@@ -818,7 +797,6 @@ xfce_spawn_secure_app_daemon (GdkScreen    *screen,
 #endif
   g_slice_free (XfceSpawnWatchData, data);
 
-  printf ("DBG: 10 (%d)\n", succeed);
   return succeed;
 }
 

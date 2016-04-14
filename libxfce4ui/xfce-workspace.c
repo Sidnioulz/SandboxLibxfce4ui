@@ -293,7 +293,7 @@ xfce_workspace_download_speed (gint ws)
   gint           speed;
 
   channel = xfce_workspace_xfconf_init ();
-  prop = g_strdup_printf ("/security/workspace_%d/download_speed", ws);
+  prop = g_strdup_printf ("/security/workspace_%d/bandwidth_download", ws);
   speed = xfconf_channel_get_int (channel, prop, 1000000);
   g_free (prop);
 
@@ -310,7 +310,7 @@ xfce_workspace_upload_speed (gint ws)
   gint           speed;
 
   channel = xfce_workspace_xfconf_init ();
-  prop = g_strdup_printf ("/security/workspace_%d/upload_speed", ws);
+  prop = g_strdup_printf ("/security/workspace_%d/bandwidth_upload", ws);
   speed = xfconf_channel_get_int (channel, prop, 1000000);
   g_free (prop);
 
