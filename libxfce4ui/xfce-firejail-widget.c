@@ -926,8 +926,8 @@ _xfce_firejail_widget_constructed (GObject          *object)
   gtk_combo_box_set_row_separator_func (GTK_COMBO_BOX (widget), _xfce_firejail_widget_profile_list_item_is_separator, NULL, NULL);
 
   /* first with the two generic profiles */
-  add_to_profile_list (widget, name, "Generic application profile", TRUE, self->base_profile, &active_set);
-  add_to_profile_list (widget, name, "Generic daemon profile", TRUE, self->base_profile, &active_set);
+  add_to_profile_list (widget, "generic", "Generic application profile", TRUE, self->base_profile, &active_set);
+  add_to_profile_list (widget, "server", "Generic daemon profile", TRUE, self->base_profile, &active_set);
   add_to_profile_list (widget, XFCE_FIREJAIL_WIDGET_PROFILE_LIST_SEPARATOR, NULL, TRUE, self->base_profile, &active_set);
 
   profiles = xfce_get_firejail_profile_names (FALSE);
