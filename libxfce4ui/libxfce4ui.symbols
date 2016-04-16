@@ -134,6 +134,8 @@ xfce_workspace_let_unsandboxed_in
 xfce_workspace_unsandboxed_in_behavior
 xfce_workspace_download_speed
 xfce_workspace_upload_speed
+xfce_workspace_get_path_to_home
+xfce_workspace_has_private_home
 #endif
 #endif
 

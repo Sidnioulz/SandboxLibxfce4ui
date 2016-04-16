@@ -319,6 +319,32 @@ xfce_workspace_upload_speed (gint ws)
 
 
 
+gchar *
+xfce_workspace_get_path_to_home (gint ws)
+{
+  gchar *ws_name;
+  gchar *home;
+
+  if (!xfce_workspace_enable_overlay (ws))
+    return g_strdup (g_get_home_dir ());
+
+  ws_name = xfce_workspace_get_workspace_name (ws);
+  home = g_strdup_printf ("%s/Sandboxes/%s/Users/%s/", g_get_home_dir (), ws_name, g_get_user_name ());
+  g_free (ws_name);
+
+  return home;
+}
+
+
+
+gboolean
+xfce_workspace_has_private_home (gint ws)
+{
+  return xfce_workspace_enable_overlay (ws) && xfce_workspace_enable_private_home (ws);
+}
+
+
+
 static gchar *
 xfce_workspace_name_escape (const gchar *source)
 {
