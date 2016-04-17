@@ -74,7 +74,7 @@ xfce_workspace_xfconf_init (void)
     {
       GError *error = NULL;
       xfconf_init (&error);
-  
+
       // we'll try again, just live with it for now
       if (error)
         {
@@ -333,6 +333,90 @@ xfce_workspace_get_path_to_home (gint ws)
   g_free (ws_name);
 
   return home;
+}
+
+
+
+/* Taken from GIO - GLib Input, Output and Streaming Library
+ *
+ * Copyright (C) 2006-2007 Red Hat, Inc.
+ *
+ * Under GPL license version 2 or later
+ */
+static const char *
+match_prefix (const char *path,
+              const char *prefix)
+{
+  int prefix_len;
+
+  if (!prefix || !path)
+    return NULL;
+
+  prefix_len = strlen (prefix);
+  if (strncmp (path, prefix, prefix_len) != 0)
+    return NULL;
+
+  /* Handle the case where prefix is the root, so that
+   * the IS_DIR_SEPRARATOR check below works */
+  if (prefix_len > 0 &&
+      G_IS_DIR_SEPARATOR (prefix[prefix_len-1]))
+    prefix_len--;
+
+  return path + prefix_len;
+}
+
+
+
+gchar *
+xfce_workspace_get_home_file_path_on_host (gint         ws,
+                                           const gchar *inside_file)
+{
+  const gchar *host_home;
+  gchar       *inside_home;
+  const gchar *remainder;
+  gchar       *host_file = NULL;
+
+  if (!inside_file)
+    return NULL;
+
+  host_home = g_get_home_dir ();
+  inside_home = xfce_workspace_get_path_to_home (ws);
+
+  remainder = match_prefix (inside_file, inside_home);
+
+  if (remainder != NULL && G_IS_DIR_SEPARATOR (*remainder))
+      host_file = g_strdup_printf ("%s/%s", host_home, remainder + 1);
+
+  g_free (inside_home);
+
+  return host_file;
+}
+
+
+
+gchar *
+xfce_workspace_get_home_file_path_in_sandbox (gint         ws,
+                                              const gchar *host_file)
+{
+  const gchar *host_home;
+  gchar       *inside_home;
+  const gchar *remainder;
+  gchar       *inside_file = NULL;
+
+  if (!host_file)
+    return NULL;
+
+  host_home = g_get_home_dir ();
+  inside_home = xfce_workspace_get_path_to_home (ws);
+
+  remainder = match_prefix (host_file, host_home);
+
+  if (remainder != NULL && G_IS_DIR_SEPARATOR (*remainder))
+      inside_file = g_strdup_printf ("%s/%s", inside_home, remainder + 1);
+
+  g_free (inside_home);
+
+  return inside_file;
 }
 
 

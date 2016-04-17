@@ -136,6 +136,8 @@ xfce_workspace_download_speed
 xfce_workspace_upload_speed
 xfce_workspace_get_path_to_home
 xfce_workspace_has_private_home
+xfce_workspace_get_home_file_path_on_host
+xfce_workspace_get_home_file_path_in_sandbox
 #endif
 #endif
 

@@ -54,6 +54,10 @@ gint                      xfce_workspace_download_speed               (gint ws);
 gint                      xfce_workspace_upload_speed                 (gint ws);
 gchar*                    xfce_workspace_get_path_to_home             (gint ws);
 gboolean                  xfce_workspace_has_private_home             (gint ws);
+gchar*                    xfce_workspace_get_home_file_path_on_host   (gint ws,
+                                                                       const gchar *);
+gchar*                    xfce_workspace_get_home_file_path_in_sandbox (gint ws,
+                                                                       const gchar *);
 gchar*                    xfce_workspace_get_workspace_name_escaped   (gint ws);
 gchar*                    xfce_workspace_get_workspace_name           (gint ws);
 gint                      xfce_workspace_get_workspace_id_from_name   (const gchar *);
