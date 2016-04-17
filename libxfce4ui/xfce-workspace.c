@@ -329,7 +329,7 @@ xfce_workspace_get_path_to_home (gint ws)
     return g_strdup (g_get_home_dir ());
 
   ws_name = xfce_workspace_get_workspace_name (ws);
-  home = g_strdup_printf ("%s/Sandboxes/%s/Users/%s/", g_get_home_dir (), ws_name, g_get_user_name ());
+  home = g_strdup_printf ("%s/Sandboxes/%s/Users/%s", g_get_home_dir (), ws_name, g_get_user_name ());
   g_free (ws_name);
 
   return home;
