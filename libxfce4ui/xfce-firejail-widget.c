@@ -85,6 +85,8 @@ struct _XfceFirejailWidget
   /* sandboxing options */
   gboolean         run_in_sandbox;
   gboolean         enable_network;
+  gint             bandwidth_download;
+  gint             bandwidth_upload;
   gchar           *base_profile;
   GList           *sync_folders;
   FsPrivMode       fs_mode;
@@ -144,6 +146,30 @@ _xfce_firejail_widget_set_enable_network (XfceFirejailWidget *self,
 
   if (self->key_file)
     g_key_file_set_boolean (self->key_file, G_KEY_FILE_DESKTOP_GROUP, XFCE_FIREJAIL_ENABLE_NETWORK_KEY, value);
+}
+
+
+
+static void
+_xfce_firejail_widget_set_bandwidth_download (XfceFirejailWidget *self,
+                                              gint value)
+{
+  self->bandwidth_download = value;
+
+  if (self->key_file)
+    g_key_file_set_integer (self->key_file, G_KEY_FILE_DESKTOP_GROUP, XFCE_FIREJAIL_BANDWIDTH_DOWNLOAD_KEY, value);
+}
+
+
+
+static void
+_xfce_firejail_widget_set_bandwidth_upload (XfceFirejailWidget *self,
+                                              gint value)
+{
+  self->bandwidth_upload = value;
+
+  if (self->key_file)
+    g_key_file_set_integer (self->key_file, G_KEY_FILE_DESKTOP_GROUP, XFCE_FIREJAIL_BANDWIDTH_UPLOAD_KEY, value);
 }
 
 
@@ -232,8 +258,35 @@ on_enable_network_checked (GtkToggleButton *button,
 {
   XfceFirejailWidget *self   = XFCE_FIREJAIL_WIDGET (user_data);
   gboolean            active = gtk_toggle_button_get_active(button);
+  GtkWidget          *widget = GTK_WIDGET (gtk_builder_get_object (self->builder, "net_alignment_options"));
+
+  gtk_widget_set_sensitive (widget, active);
 
   _xfce_firejail_widget_set_enable_network (self, active);
+}
+
+
+
+static void
+on_bandwidth_download_changed (GtkSpinButton *button,
+                               gpointer         user_data)
+{
+  XfceFirejailWidget *self   = XFCE_FIREJAIL_WIDGET (user_data);
+  gint                value  = gtk_spin_button_get_value_as_int (button);
+
+  _xfce_firejail_widget_set_bandwidth_download (self, value);
+}
+
+
+
+static void
+on_bandwidth_upload_changed (GtkSpinButton *button,
+                             gpointer         user_data)
+{
+  XfceFirejailWidget *self   = XFCE_FIREJAIL_WIDGET (user_data);
+  gint                value  = gtk_spin_button_get_value_as_int (button);
+
+  _xfce_firejail_widget_set_bandwidth_upload (self, value);
 }
 
 
@@ -577,6 +630,8 @@ _xfce_firejail_widget_init (XfceFirejailWidget *self)
 
   self->run_in_sandbox = XFCE_FIREJAIL_RUN_IN_SANDBOX_DEFAULT;
   self->enable_network = XFCE_FIREJAIL_ENABLE_NETWORK_DEFAULT;
+  self->bandwidth_download = XFCE_FIREJAIL_BANDWIDTH_DOWNLOAD_DEFAULT;
+  self->bandwidth_upload = XFCE_FIREJAIL_BANDWIDTH_UPLOAD_DEFAULT;
   self->base_profile = NULL;
 
   self->fs_mode = XFCE_FIREJAIL_FS_MODE_DEFAULT;
@@ -850,6 +905,10 @@ xfce_firejail_widget_load_from_key_file (XfceFirejailWidget *self,
   self->base_profile = g_key_file_get_string (file, G_KEY_FILE_DESKTOP_GROUP, XFCE_FIREJAIL_PROFILE_KEY, NULL);
   self->enable_network = g_key_file_has_key (file, G_KEY_FILE_DESKTOP_GROUP, XFCE_FIREJAIL_ENABLE_NETWORK_KEY, NULL)?
                          g_key_file_get_boolean (file, G_KEY_FILE_DESKTOP_GROUP, XFCE_FIREJAIL_ENABLE_NETWORK_KEY, NULL) : XFCE_FIREJAIL_ENABLE_NETWORK_DEFAULT;
+  self->bandwidth_download = g_key_file_has_key (file, G_KEY_FILE_DESKTOP_GROUP, XFCE_FIREJAIL_BANDWIDTH_DOWNLOAD_KEY, NULL)?
+                         g_key_file_get_integer (file, G_KEY_FILE_DESKTOP_GROUP, XFCE_FIREJAIL_BANDWIDTH_DOWNLOAD_KEY, NULL) : XFCE_FIREJAIL_BANDWIDTH_DOWNLOAD_DEFAULT;
+  self->bandwidth_upload = g_key_file_has_key (file, G_KEY_FILE_DESKTOP_GROUP, XFCE_FIREJAIL_BANDWIDTH_UPLOAD_KEY, NULL)?
+                         g_key_file_get_integer (file, G_KEY_FILE_DESKTOP_GROUP, XFCE_FIREJAIL_BANDWIDTH_UPLOAD_KEY, NULL) : XFCE_FIREJAIL_BANDWIDTH_UPLOAD_DEFAULT;
   self->fs_mode = g_key_file_has_key (file, G_KEY_FILE_DESKTOP_GROUP, XFCE_FIREJAIL_FS_MODE_KEY, NULL)?
                   g_key_file_get_integer (file, G_KEY_FILE_DESKTOP_GROUP, XFCE_FIREJAIL_FS_MODE_KEY, NULL) : XFCE_FIREJAIL_FS_MODE_DEFAULT;
   self->disposable = g_key_file_has_key (file, G_KEY_FILE_DESKTOP_GROUP, XFCE_FIREJAIL_DISPOSABLE_KEY, NULL)?
@@ -884,6 +943,8 @@ _xfce_firejail_widget_constructed (GObject          *object)
 {
   XfceFirejailWidget *self = XFCE_FIREJAIL_WIDGET (object);
   GtkWidget          *widget;
+  GtkWidget          *spinbutton_dl;
+  GtkWidget          *spinbutton_ul;
   GList              *profiles            = NULL;
   GList              *lp                  = NULL;
   GtkCellRenderer    *render;
@@ -917,6 +978,18 @@ _xfce_firejail_widget_constructed (GObject          *object)
   gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (widget), self->enable_network);
   g_signal_connect (widget, "toggled", G_CALLBACK (on_enable_network_checked), self);
   on_enable_network_checked (GTK_TOGGLE_BUTTON (widget), self);
+
+  /* Bandwidth spinners */
+  spinbutton_dl = GTK_WIDGET (gtk_builder_get_object (self->builder, "spinbutton_dl"));
+  spinbutton_ul = GTK_WIDGET (gtk_builder_get_object (self->builder, "spinbutton_ul"));
+  gtk_spin_button_set_range (GTK_SPIN_BUTTON (spinbutton_dl), 0, 200000);
+  gtk_spin_button_set_range (GTK_SPIN_BUTTON (spinbutton_ul), 0, 200000);
+  gtk_spin_button_set_value (GTK_SPIN_BUTTON (spinbutton_dl), self->bandwidth_download);
+  gtk_spin_button_set_value (GTK_SPIN_BUTTON (spinbutton_ul), self->bandwidth_upload);
+  g_signal_connect (spinbutton_dl, "value-changed", G_CALLBACK (on_bandwidth_download_changed), self);
+  g_signal_connect (spinbutton_ul, "value-changed", G_CALLBACK (on_bandwidth_upload_changed), self);
+  on_bandwidth_download_changed (GTK_SPIN_BUTTON (spinbutton_dl), self);
+  on_bandwidth_upload_changed (GTK_SPIN_BUTTON (spinbutton_ul), self);
 
   /* populate the profile list */
   widget = GTK_WIDGET (gtk_builder_get_object (self->builder, "profile_combobox"));

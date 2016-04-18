@@ -54,14 +54,18 @@ typedef enum {
 #define XFCE_FIREJAIL_RUN_IN_SANDBOX_KEY     "X-XfceSandboxWithFirejail"
 #define XFCE_FIREJAIL_PROFILE_KEY            "X-XfceFirejailProfile"
 #define XFCE_FIREJAIL_ENABLE_NETWORK_KEY     "X-XfceFirejailEnableNetwork"
+#define XFCE_FIREJAIL_BANDWIDTH_DOWNLOAD_KEY "X-XfceFirejailBandwidthDownload"
+#define XFCE_FIREJAIL_BANDWIDTH_UPLOAD_KEY   "X-XfceFirejailBandwidthUpload"
 #define XFCE_FIREJAIL_FS_MODE_KEY            "X-XfceFirejailFsMode"
 #define XFCE_FIREJAIL_DISPOSABLE_KEY         "X-XfceFirejailOverlayDisposable"
 #define XFCE_FIREJAIL_FS_SYNC_FOLDERS_KEY    "X-XfceFirejailSyncFolders"
 
-#define XFCE_FIREJAIL_RUN_IN_SANDBOX_DEFAULT FALSE
-#define XFCE_FIREJAIL_ENABLE_NETWORK_DEFAULT TRUE
-#define XFCE_FIREJAIL_DISPOSABLE_DEFAULT     FALSE
-#define XFCE_FIREJAIL_FS_MODE_DEFAULT        FS_PRIV_FULL
+#define XFCE_FIREJAIL_RUN_IN_SANDBOX_DEFAULT     FALSE
+#define XFCE_FIREJAIL_ENABLE_NETWORK_DEFAULT     TRUE
+#define XFCE_FIREJAIL_BANDWIDTH_DOWNLOAD_DEFAULT 200000
+#define XFCE_FIREJAIL_BANDWIDTH_UPLOAD_DEFAULT   200000
+#define XFCE_FIREJAIL_DISPOSABLE_DEFAULT         FALSE
+#define XFCE_FIREJAIL_FS_MODE_DEFAULT            FS_PRIV_FULL
 #endif
 
 XfceFirejailWidget* xfce_firejail_widget_new                          (GKeyFile *file);
