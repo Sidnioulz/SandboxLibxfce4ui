@@ -551,24 +551,25 @@ gint
 xfce_workspace_get_workspace_id_from_name (const gchar *name)
 {
   XfconfChannel *channel;
-  gint           n;
-  gint           ws_count;
-  gchar         *ws_name;
+  gchar        **labels;
+  gint           i;
 
   channel = xfce_workspace_xfconf_init ();
-  ws_count = xfconf_channel_get_int (channel, "/general/workspace_count", 1);
 
-  for (n = 0; n < ws_count; n++)
+  labels = xfconf_channel_get_string_list (channel, "/general/workspace_names");
+  if (!labels)
+    return -1;
+
+  for (i = 0; labels[i] != NULL; i++)
     {
-      ws_name = xfce_workspace_get_workspace_name (n);
-      if (g_strcmp0 (ws_name, name) == 0)
+      if (g_strcmp0 (labels[i], name) == 0)
         {
-          g_free (ws_name);
-          return n;
+          g_strfreev (labels);
+          return i;
         }
-      g_free (ws_name);
     }
 
+  g_strfreev (labels);
   return -1;
 }
 
