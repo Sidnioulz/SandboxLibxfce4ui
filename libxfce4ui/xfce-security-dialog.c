@@ -513,7 +513,6 @@ xfce_security_dialog_add_border (GtkWindow *window)
 
 GtkWidget *
 xfce_security_dialog_new (GdkScreen        *screen,
-                          GtkWindow        *parent,
                           const gchar      *title)
 {
   GtkWidget        *hidden;

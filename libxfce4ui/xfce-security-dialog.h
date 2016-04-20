@@ -58,7 +58,6 @@ void       xfce_security_dialog_set_top_widget    (XfceSecurityDialog *dialog,
 void       xfce_security_dialog_set_bottom_widget (XfceSecurityDialog *dialog,
                                                    GtkWidget          *widget);
 GtkWidget *xfce_security_dialog_new               (GdkScreen        *screen,
-                                                   GtkWindow        *parent,
                                                    const gchar      *title);
 
 G_END_DECLS;
