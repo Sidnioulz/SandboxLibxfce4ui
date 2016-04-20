@@ -26,6 +26,8 @@
 
 #include <libxfce4ui/libxfce4ui-config.h>
 #include <libxfce4ui/xfce-dialogs.h>
+#include <libxfce4ui/xfce-fadeout.h>
+#include <libxfce4ui/xfce-security-dialog.h>
 #include <libxfce4ui/xfce-gdk-extensions.h>
 #include <libxfce4ui/xfce-gtk-extensions.h>
 #include <libxfce4ui/xfce-spawn.h>

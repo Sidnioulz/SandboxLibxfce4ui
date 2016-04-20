@@ -19,6 +19,8 @@ libxfce4ui_headers = \
 	libxfce4ui-enum-types.h \
 	xfce-firejail-widget.h \
 	xfce-dialogs.h \
+	xfce-security-dialog.h \
+	xfce-fadeout.h \
 	xfce-gdk-extensions.h \
 	xfce-gtk-extensions.h \
 	xfce-spawn.h \
@@ -41,6 +43,8 @@ libxfce4ui_sources = \
 	libxfce4ui-config.c \
 	libxfce4ui-private.h \
 	xfce-dialogs.c \
+	xfce-security-dialog.c \
+	xfce-fadeout.c \
 	xfce-firejail-widget.c \
 	xfce-gdk-extensions.c \
 	xfce-gtk-extensions.c \
