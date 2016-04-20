@@ -62,7 +62,6 @@
 
 
 static void       xfce_security_dialog_finalize     (GObject            *object);
-static void       xfce_security_dialog_activate     (XfceSecurityDialog *dialog);
 static void       xfce_security_dialog_set_property (GObject          *object,
                                                      guint             property_id,
                                                      const GValue     *value,
@@ -395,15 +394,6 @@ xfce_security_dialog_add_button (XfceSecurityDialog *dialog,
     gtk_widget_grab_focus (button);
 
   return button;
-}
-
-
-
-static void
-xfce_security_dialog_activate (XfceSecurityDialog *dialog)
-{
-  g_return_if_fail (XFCE_IS_SECURITY_DIALOG (dialog));
-  gtk_dialog_response (GTK_DIALOG (dialog), GTK_RESPONSE_OK);
 }
 
 
