@@ -106,6 +106,7 @@ xfce_gtk_window_center_on_active_screen
 /* xfce-spawn functions */
 #if IN_HEADER(__XFCE_SPAWN_H__)
 #if IN_SOURCE(__XFCE_SPAWN_C__)
+xfce_client_is_xfce
 xfce_spawn_on_screen_with_child_watch
 xfce_spawn_on_screen
 xfce_spawn_command_line_on_screen
@@ -166,6 +167,28 @@ xfce_sm_client_set_restart_command
 xfce_sm_client_get_restart_command
 xfce_sm_client_set_current_directory
 xfce_sm_client_get_current_directory
+#endif
+#endif
+
+/* xfce-fadeout functions */
+#if IN_HEADER(__XFCE_FADEOUT_H__)
+#if IN_SOURCE(__XFCE_FADEOUT_C__)
+xfce_fadeout_new G_GNUC_MALLOC
+xfce_fadeout_clear
+xfce_fadeout_destroy
+#endif
+#endif
+
+/* xfce-security-dialog functions */
+#if IN_HEADER(__XFCE_SECURITY_DIALOG_H__)
+#if IN_SOURCE(__XFCE_SECURITY_DIALOG_C__)
+xfce_security_dialog_get_type G_GNUC_CONST
+xfce_security_dialog_new G_GNUC_MALLOC
+xfce_security_dialog_add_button
+xfce_security_dialog_run
+xfce_security_dialog_set_title
+xfce_security_dialog_set_top_widget
+xfce_security_dialog_set_bottom_widget
 #endif
 #endif
 

@@ -802,16 +802,18 @@ xfce_spawn_secure_app_daemon (GdkScreen    *screen,
 
 
 
-static gboolean
+gboolean
 xfce_client_is_xfce (gchar *client)
 {
     gchar *name = client;
+    gchar *last;
 
     if (!name)
         return FALSE;
 
-    if (name[0] == '/')
-        name = strrchr (name, '/');
+    last = strrchr (name, '/');
+    if (last)
+        name = last + 1;
 
     return g_strcmp0 (name, "xfce4-panel") == 0               || g_strcmp0 (name, "xfdesktop") == 0 ||
            g_strcmp0 (name, "notify-osd") == 0                || g_strcmp0 (name, "xfce4-notifyd") == 0 ||
