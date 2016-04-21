@@ -3,6 +3,7 @@
 #
 libxfce4ui/libxfce4ui-config.c
 libxfce4ui/xfce-dialogs.c
+libxfce4ui/xfce-security-dialog.c
 libxfce4ui/xfce-gdk-extensions.c
 libxfce4ui/xfce-gtk-extensions.c
 libxfce4ui/xfce-sm-client.c
