@@ -25,6 +25,7 @@
 #endif
 
 #include <gtk/gtk.h>
+#include <gdk/gdkx.h>
 
 #include <libxfce4ui/xfce-fadeout.h>
 #include <libxfce4ui/libxfce4ui-private.h>
@@ -41,6 +42,83 @@ struct _XfceFadeout
 XfceFadeout*
 xfce_fadeout_new (GdkDisplay *display)
 {
+#if GTK_CHECK_VERSION (3, 0, 0)
+  GdkWindowAttr    attr;
+  XfceFadeout     *fadeout;
+  GdkWindow       *root;
+  GdkCursor       *cursor;
+  cairo_t         *cr;
+  gint             width;
+  gint             height;
+  gint             n;
+  GdkPixbuf       *root_pixbuf;
+  cairo_surface_t *surface;
+  GdkScreen       *gdk_screen;
+  GdkWindow       *window;
+  GdkRGBA          black = { 0, };
+
+  fadeout = g_slice_new0 (XfceFadeout);
+
+  cursor = gdk_cursor_new_for_display (display, GDK_WATCH);
+
+  attr.x = 0;
+  attr.y = 0;
+  attr.event_mask = 0;
+  attr.wclass = GDK_INPUT_OUTPUT;
+  attr.window_type = GDK_WINDOW_TEMP;
+  attr.cursor = cursor;
+  attr.override_redirect = TRUE;
+
+  for (n = 0; n < XScreenCount (gdk_x11_display_get_xdisplay ((display))); ++n)
+    {
+      gdk_screen = gdk_display_get_screen (display, n);
+
+      root = gdk_screen_get_root_window (gdk_screen);
+
+      width = gdk_window_get_width (root);
+      height = gdk_window_get_height (root);
+
+      attr.width = width;
+      attr.height = height;
+      window = gdk_window_new (root, &attr, GDK_WA_X | GDK_WA_Y
+                               | GDK_WA_NOREDIR | GDK_WA_CURSOR);
+
+      if (gdk_screen_is_composited (gdk_screen)
+          && gdk_screen_get_rgba_visual (gdk_screen) != NULL)
+        {
+          /* transparent black window */
+          gdk_window_set_background_rgba (window, &black);
+          gdk_window_set_opacity (window, 0.50);
+        }
+      else
+        {
+          /* create background for window */
+          surface = gdk_window_create_similar_surface (root, CAIRO_CONTENT_COLOR_ALPHA, width, height);
+          cr = cairo_create (surface);
+
+          /* make of copy of the root window */
+          root_pixbuf = gdk_pixbuf_get_from_window (root, 0, 0, width, height);
+          gdk_cairo_set_source_pixbuf (cr, root_pixbuf, 0, 0);
+          cairo_paint (cr);
+          g_object_unref (G_OBJECT (root_pixbuf));
+
+          /* draw black layer */
+          gdk_cairo_set_source_rgba (cr, &black);
+          cairo_paint_with_alpha (cr, 0.50);
+          cairo_destroy (cr);
+          cairo_surface_destroy (surface);
+        }
+
+      fadeout->windows = g_slist_prepend (fadeout->windows, window);
+    }
+
+  /* show all windows all at once */
+  g_slist_foreach (fadeout->windows, (GFunc) gdk_window_show, NULL);
+
+  g_object_unref (cursor);
+
+  return fadeout;
+#else
   GdkWindowAttr  attr;
   XfceFadeout   *fadeout;
   GdkWindow     *root;
@@ -50,9 +128,7 @@ xfce_fadeout_new (GdkDisplay *display)
   gint           height;
   gint           n;
   GdkPixbuf     *root_pixbuf;
-#if !GTK_CHECK_VERSION (3, 0, 0)
   GdkPixmap     *backbuf;
-#endif
   GdkScreen     *gdk_screen;
   GdkWindow     *window;
   GdkColor       black = { 0, };
@@ -91,12 +167,8 @@ xfce_fadeout_new (GdkDisplay *display)
       else
         {
           /* create background for window */
-#if !GTK_CHECK_VERSION (3, 0, 0)
           backbuf = gdk_pixmap_new (GDK_DRAWABLE (root), width, height, -1);
           cr = gdk_cairo_create (GDK_DRAWABLE (backbuf));
-#else
-          cr = gdk_cairo_create (root);
-#endif
 
           /* make of copy of the root window */
           root_pixbuf = gdk_pixbuf_get_from_drawable (NULL, GDK_DRAWABLE (root), NULL,
@@ -110,10 +182,8 @@ xfce_fadeout_new (GdkDisplay *display)
           cairo_paint_with_alpha (cr, 0.50);
           cairo_destroy (cr);
 
-#if !GTK_CHECK_VERSION (3, 0, 0)
           gdk_window_set_back_pixmap (window, backbuf, FALSE);
           g_object_unref (G_OBJECT (backbuf));
-#endif
         }
 
       fadeout->windows = g_slist_prepend (fadeout->windows, window);
@@ -125,6 +195,7 @@ xfce_fadeout_new (GdkDisplay *display)
   gdk_cursor_unref (cursor);
 
   return fadeout;
+#endif
 }
 
 
