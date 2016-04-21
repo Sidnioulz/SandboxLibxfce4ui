@@ -28,7 +28,7 @@
 
 G_BEGIN_DECLS
 
-gboolean xfce_client_is_xfce                   (gchar *client);
+gboolean xfce_client_is_xfce                   (const gchar  *client);
 
 gboolean xfce_spawn_on_screen_with_child_watch (GdkScreen    *screen,
                                                 const gchar  *working_directory,

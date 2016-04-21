@@ -803,9 +803,9 @@ xfce_spawn_secure_app_daemon (GdkScreen    *screen,
 
 
 gboolean
-xfce_client_is_xfce (gchar *client)
+xfce_client_is_xfce (const gchar *client)
 {
-    gchar *name = client;
+    const gchar *name = client;
     gchar *last;
 
     if (!name)
