@@ -495,7 +495,7 @@ xfce_spawn_secure_workspace_daemon (GdkScreen    *screen,
       monitor_path = g_strdup_printf ("%s/xfce4/secure-workspace-%d.notify",
                                       g_get_user_cache_dir (),
                                       workspace_number);
-      argv[index++] = monitor_path;
+      argv[index++] = g_strdup (monitor_path);
     }
   
   /* assuming that this would fail only because the file doesn't exist; if it
