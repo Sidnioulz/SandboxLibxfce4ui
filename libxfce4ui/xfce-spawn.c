@@ -697,7 +697,7 @@ xfce_spawn_secure_app_daemon (GdkScreen    *screen,
       monitor_path = g_strdup_printf ("%s/xfce4/secure-app-%s.notify",
                                       g_get_user_cache_dir (),
                                       firejail_domain_name);
-      argv[index++] = monitor_path;
+      argv[index++] = g_strdup (monitor_path);
     }
   argv[index] = NULL;
 
