@@ -1106,6 +1106,7 @@ xfce_spawn_on_screen_with_child_watch (GdkScreen    *screen,
   gchar              *ws_name;
   const gchar        *app_name = argv? argv[0]:NULL;
   const gchar        *firejail_domain_name = NULL;
+  gboolean            already_in_firejail = FALSE;
   gboolean            is_firejail = FALSE;
   gboolean            is_joining_firejail = FALSE;
   gboolean            sandboxing_in_ws  = FALSE;
@@ -1118,7 +1119,11 @@ xfce_spawn_on_screen_with_child_watch (GdkScreen    *screen,
 
   for (argc = 0; argv && argv[argc]; argc++);
 
-  if (argv && argv[0] && (strcmp (argv[0], "firejail") == 0 ||
+  /* check if we might already be sandboxed */
+  already_in_firejail = check_outside_sandbox () == 0;
+
+  /* check if we are executing a standalone firejail instance */
+  if (!already_in_firejail && argv && argv[0] && (strcmp (argv[0], "firejail") == 0 ||
     strncmp (argv[0], "firejail ", 9) == 0 ||
     strcmp (argv[0], "/usr/bin/firejail") == 0 ||
     strncmp (argv[0], "/usr/bin/firejail ", 18) == 0 ||
@@ -1167,7 +1172,7 @@ xfce_spawn_on_screen_with_child_watch (GdkScreen    *screen,
   g_free (display_name);
 
   /* named sandbox support */
-  if (is_firejail && firejail_domain_name)
+  if (!already_in_firejail && is_firejail && firejail_domain_name)
     {
       pid_t result;
 
@@ -1212,7 +1217,7 @@ xfce_spawn_on_screen_with_child_watch (GdkScreen    *screen,
     }
 
   /* secure workspace support */
-  sandboxing_in_ws = !is_firejail && xfce_workspace_is_secure (sn_workspace) && !xfce_client_is_xfce (argv[0]);
+  sandboxing_in_ws = !already_in_firejail && !is_firejail && xfce_workspace_is_secure (sn_workspace) && !xfce_client_is_xfce (argv[0]);
   if (sandboxing_in_ws)
     {
       ws_name = xfce_workspace_get_workspace_name (sn_workspace);
