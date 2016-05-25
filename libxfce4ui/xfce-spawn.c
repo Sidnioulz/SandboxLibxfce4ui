@@ -617,7 +617,7 @@ xfce_spawn_secure_workspace_daemon (GdkScreen    *screen,
           /* we KNOW that we failed */
           if (data->exitted)
             {
-              g_set_error (error, G_SPAWN_ERROR, G_SPAWN_ERROR_FAILED, _("Firejail crashed \"%s\""), ws_name);
+              g_set_error (error, G_SPAWN_ERROR, G_SPAWN_ERROR_FAILED, _("Firejail crashed with return code: %d"), data->exitted);
             }
           /* we haven't heard from the file monitor, could be a bug */
           else
@@ -901,7 +901,7 @@ xfce_spawn_secure_app_daemon (GdkScreen    *screen,
           /* we KNOW that we failed */
           if (data->exitted)
             {
-              g_set_error (error, G_SPAWN_ERROR, G_SPAWN_ERROR_FAILED, _("Firejail crashed \"%s\""), firejail_domain_name);
+              g_set_error (error, G_SPAWN_ERROR, G_SPAWN_ERROR_FAILED, _("Firejail crashed with return code: %d"), data->exitted);
             }
           /* we haven't heard from the file monitor, could be a bug */
           else
