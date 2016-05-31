@@ -4,7 +4,6 @@ SUBDIRS = \
 	libxfce4ui \
 	libxfce4kbd-private \
 	xfce4-about \
-	xfce4-sandboxd \
 	glade \
 	icons \
 	docs \
